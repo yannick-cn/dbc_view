@@ -1,0 +1,382 @@
+#include "mainwindow.h"
+#include <QApplication>
+#include <QHeaderView>
+#include <QMessageBox>
+#include <QDebug>
+
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , m_dbcParser(new DbcParser())
+    , m_currentMessage(nullptr)
+    , m_currentSignal(nullptr)
+{
+    setupUI();
+    setupMenuBar();
+    setupStatusBar();
+    
+    setWindowTitle("DBC Viewer");
+    setMinimumSize(1000, 700);
+    resize(1200, 800);
+    
+    // Enable drag and drop
+    setAcceptDrops(true);
+}
+
+MainWindow::~MainWindow()
+{
+    delete m_dbcParser;
+}
+
+void MainWindow::setupUI()
+{
+    m_centralWidget = new QWidget(this);
+    setCentralWidget(m_centralWidget);
+    
+    // Create main layout
+    QHBoxLayout *mainLayout = new QHBoxLayout(m_centralWidget);
+    
+    // Create splitters
+    m_mainSplitter = new QSplitter(Qt::Horizontal, this);
+    m_rightSplitter = new QSplitter(Qt::Vertical, this);
+    
+    // Left panel - Message tree
+    m_messageGroup = new QGroupBox("CAN Messages", this);
+    QVBoxLayout *messageLayout = new QVBoxLayout(m_messageGroup);
+    
+    m_messageTree = new QTreeWidget(this);
+    m_messageTree->setHeaderLabels(QStringList() << "ID" << "Name" << "Length" << "Transmitter" << "Cycle Time");
+    m_messageTree->setAlternatingRowColors(true);
+    m_messageTree->setRootIsDecorated(false);
+    m_messageTree->setSortingEnabled(true);
+    m_messageTree->sortByColumn(0, Qt::AscendingOrder);
+    
+    connect(m_messageTree, &QTreeWidget::itemSelectionChanged, this, &MainWindow::onMessageSelectionChanged);
+    
+    messageLayout->addWidget(m_messageTree);
+    
+    // Right panel - Signal table
+    m_signalGroup = new QGroupBox("Signals", this);
+    QVBoxLayout *signalLayout = new QVBoxLayout(m_signalGroup);
+    
+    m_signalTable = new QTableWidget(this);
+    m_signalTable->setColumnCount(8);
+    m_signalTable->setHorizontalHeaderLabels(QStringList() 
+        << "Name" << "Start Bit" << "Length" << "Factor" << "Offset" 
+        << "Min" << "Max" << "Unit");
+    m_signalTable->setAlternatingRowColors(true);
+    m_signalTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_signalTable->setSortingEnabled(true);
+    m_signalTable->horizontalHeader()->setStretchLastSection(true);
+    
+    connect(m_signalTable, &QTableWidget::itemSelectionChanged, this, &MainWindow::onSignalSelectionChanged);
+    
+    signalLayout->addWidget(m_signalTable);
+    
+    // Details panel
+    m_detailsGroup = new QGroupBox("Signal Details", this);
+    QVBoxLayout *detailsLayout = new QVBoxLayout(m_detailsGroup);
+    
+    m_detailsTabs = new QTabWidget(this);
+    
+    m_signalDetails = new QTextEdit(this);
+    m_signalDetails->setReadOnly(true);
+    m_signalDetails->setFont(QFont("Courier", 10));
+    
+    m_valueTable = new QTextEdit(this);
+    m_valueTable->setReadOnly(true);
+    m_valueTable->setFont(QFont("Courier", 10));
+    
+    m_detailsTabs->addTab(m_signalDetails, "Properties");
+    m_detailsTabs->addTab(m_valueTable, "Value Table");
+    
+    detailsLayout->addWidget(m_detailsTabs);
+    
+    // Add to splitters
+    m_rightSplitter->addWidget(m_signalGroup);
+    m_rightSplitter->addWidget(m_detailsGroup);
+    m_rightSplitter->setSizes(QList<int>() << 300 << 200);
+    
+    m_mainSplitter->addWidget(m_messageGroup);
+    m_mainSplitter->addWidget(m_rightSplitter);
+    m_mainSplitter->setSizes(QList<int>() << 400 << 600);
+    
+    mainLayout->addWidget(m_mainSplitter);
+}
+
+void MainWindow::setupMenuBar()
+{
+    QMenuBar *menuBar = this->menuBar();
+    
+    // File menu
+    QMenu *fileMenu = menuBar->addMenu("&File");
+    
+    QAction *openAction = new QAction("&Open DBC File...", this);
+    openAction->setShortcut(QKeySequence::Open);
+    openAction->setStatusTip("Open a DBC file");
+    connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
+    fileMenu->addAction(openAction);
+    
+    fileMenu->addSeparator();
+    
+    QAction *exitAction = new QAction("E&xit", this);
+    exitAction->setShortcut(QKeySequence::Quit);
+    exitAction->setStatusTip("Exit the application");
+    connect(exitAction, &QAction::triggered, this, &QWidget::close);
+    fileMenu->addAction(exitAction);
+    
+    // Help menu
+    QMenu *helpMenu = menuBar->addMenu("&Help");
+    
+    QAction *aboutAction = new QAction("&About", this);
+    aboutAction->setStatusTip("About DBC Viewer");
+    connect(aboutAction, &QAction::triggered, this, &MainWindow::showAbout);
+    helpMenu->addAction(aboutAction);
+}
+
+void MainWindow::setupStatusBar()
+{
+    m_statusLabel = new QLabel("Ready");
+    m_fileLabel = new QLabel("No file loaded");
+    
+    statusBar()->addWidget(m_statusLabel);
+    statusBar()->addPermanentWidget(m_fileLabel);
+}
+
+void MainWindow::openFile()
+{
+    QString fileName = QFileDialog::getOpenFileName(this,
+        "Open DBC File", "", "DBC Files (*.dbc);;All Files (*)");
+    
+    if (!fileName.isEmpty()) {
+        loadDbcFile(fileName);
+    }
+}
+
+void MainWindow::loadDbcFile(const QString &filePath)
+{
+    if (m_dbcParser->parseFile(filePath)) {
+        m_fileLabel->setText(QString("File: %1").arg(QFileInfo(filePath).fileName()));
+        m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
+        
+        populateMessageTree();
+        clearViews();
+    } else {
+        QMessageBox::critical(this, "Error", "Failed to parse DBC file!");
+        m_statusLabel->setText("Error loading file");
+    }
+}
+
+void MainWindow::populateMessageTree()
+{
+    m_messageTree->clear();
+    
+    for (CanMessage *message : m_dbcParser->getMessages()) {
+        QTreeWidgetItem *item = new QTreeWidgetItem(m_messageTree);
+        item->setText(0, message->getFormattedId());
+        item->setText(1, message->getName());
+        item->setText(2, QString::number(message->getLength()));
+        item->setText(3, message->getTransmitter());
+        item->setText(4, message->getCycleTime() > 0 ? QString("%1 ms").arg(message->getCycleTime()) : "N/A");
+        
+        // Store message pointer in item data
+        item->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(message)));
+        
+        // Add signals as child items
+        for (CanSignal *signal : message->getSignals()) {
+            QTreeWidgetItem *signalItem = new QTreeWidgetItem(item);
+            signalItem->setText(0, signal->getName());
+            signalItem->setText(1, QString("Bit %1").arg(signal->getStartBit()));
+            signalItem->setText(2, QString("%1 bits").arg(signal->getLength()));
+            signalItem->setText(3, signal->getUnit());
+            signalItem->setText(4, signal->getReceiver());
+            
+            // Store signal pointer in item data
+            signalItem->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(signal)));
+        }
+    }
+    
+    m_messageTree->expandAll();
+}
+
+void MainWindow::populateSignalTable(CanMessage *message)
+{
+    if (!message) {
+        m_signalTable->setRowCount(0);
+        return;
+    }
+    
+    QList<CanSignal*> signalList = message->getSignals();
+    m_signalTable->setRowCount(signalList.size());
+    
+    for (int i = 0; i < signalList.size(); ++i) {
+        CanSignal *signal = signalList[i];
+        
+        m_signalTable->setItem(i, 0, new QTableWidgetItem(signal->getName()));
+        m_signalTable->setItem(i, 1, new QTableWidgetItem(QString::number(signal->getStartBit())));
+        m_signalTable->setItem(i, 2, new QTableWidgetItem(QString::number(signal->getLength())));
+        m_signalTable->setItem(i, 3, new QTableWidgetItem(QString::number(signal->getFactor())));
+        m_signalTable->setItem(i, 4, new QTableWidgetItem(QString::number(signal->getOffset())));
+        m_signalTable->setItem(i, 5, new QTableWidgetItem(QString::number(signal->getMin())));
+        m_signalTable->setItem(i, 6, new QTableWidgetItem(QString::number(signal->getMax())));
+        m_signalTable->setItem(i, 7, new QTableWidgetItem(signal->getUnit()));
+        
+        // Store signal pointer in item data
+        m_signalTable->item(i, 0)->setData(Qt::UserRole, QVariant::fromValue(static_cast<void*>(signal)));
+    }
+    
+    m_signalTable->resizeColumnsToContents();
+}
+
+void MainWindow::populateSignalDetails(CanSignal *signal)
+{
+    if (!signal) {
+        m_signalDetails->clear();
+        m_valueTable->clear();
+        return;
+    }
+    
+    // Signal properties
+    QString details = QString(
+        "Name: %1\n"
+        "Start Bit: %2\n"
+        "Length: %3 bits\n"
+        "Byte Order: %4\n"
+        "Signed: %5\n"
+        "Factor: %6\n"
+        "Offset: %7\n"
+        "Min Value: %8\n"
+        "Max Value: %9\n"
+        "Unit: %10\n"
+        "Receiver: %11\n"
+        "\nPhysical Value Calculation:\n"
+        "Physical = Raw × %6 + %7\n"
+        "Raw = (Physical - %7) ÷ %6"
+    ).arg(signal->getName())
+     .arg(signal->getStartBit())
+     .arg(signal->getLength())
+     .arg(signal->getByteOrder() == 0 ? "Little Endian" : "Big Endian")
+     .arg(signal->isSigned() ? "Yes" : "No")
+     .arg(signal->getFactor())
+     .arg(signal->getOffset())
+     .arg(signal->getMin())
+     .arg(signal->getMax())
+     .arg(signal->getUnit())
+     .arg(signal->getReceiver());
+    
+    m_signalDetails->setPlainText(details);
+    
+    // Value table
+    QMap<int, QString> valueTable = signal->getValueTable();
+    if (valueTable.isEmpty()) {
+        m_valueTable->setPlainText("No value table defined for this signal.");
+    } else {
+        QString valueTableText = "Value Table:\n\n";
+        for (auto it = valueTable.begin(); it != valueTable.end(); ++it) {
+            valueTableText += QString("%1: %2\n").arg(it.key()).arg(it.value());
+        }
+        m_valueTable->setPlainText(valueTableText);
+    }
+}
+
+void MainWindow::onMessageSelectionChanged()
+{
+    QList<QTreeWidgetItem*> selectedItems = m_messageTree->selectedItems();
+    
+    if (selectedItems.isEmpty()) {
+        m_currentMessage = nullptr;
+        populateSignalTable(nullptr);
+        populateSignalDetails(nullptr);
+        return;
+    }
+    
+    QTreeWidgetItem *item = selectedItems.first();
+    void *data = item->data(0, Qt::UserRole).value<void*>();
+    
+    // Check if it's a message or signal
+    if (item->parent() == nullptr) {
+        // It's a message
+        m_currentMessage = static_cast<CanMessage*>(data);
+        m_currentSignal = nullptr;
+        populateSignalTable(m_currentMessage);
+        populateSignalDetails(nullptr);
+    } else {
+        // It's a signal
+        m_currentSignal = static_cast<CanSignal*>(data);
+        m_currentMessage = static_cast<CanMessage*>(item->parent()->data(0, Qt::UserRole).value<void*>());
+        populateSignalTable(m_currentMessage);
+        populateSignalDetails(m_currentSignal);
+    }
+}
+
+void MainWindow::onSignalSelectionChanged()
+{
+    QList<QTableWidgetItem*> selectedItems = m_signalTable->selectedItems();
+    
+    if (selectedItems.isEmpty()) {
+        m_currentSignal = nullptr;
+        populateSignalDetails(nullptr);
+        return;
+    }
+    
+    QTableWidgetItem *item = selectedItems.first();
+    void *data = item->data(Qt::UserRole).value<void*>();
+    m_currentSignal = static_cast<CanSignal*>(data);
+    
+    populateSignalDetails(m_currentSignal);
+}
+
+void MainWindow::clearViews()
+{
+    m_signalTable->setRowCount(0);
+    m_signalDetails->clear();
+    m_valueTable->clear();
+    m_currentMessage = nullptr;
+    m_currentSignal = nullptr;
+}
+
+void MainWindow::showAbout()
+{
+    QMessageBox::about(this, "About DBC Viewer",
+        "<h3>DBC Viewer</h3>"
+        "<p>A Qt-based application for viewing and analyzing DBC (Database CAN) files.</p>"
+        "<p><b>Features:</b></p>"
+        "<ul>"
+        "<li>Parse and display CAN messages and signals</li>"
+        "<li>View signal properties and value tables</li>"
+        "<li>Tree view of messages and signals</li>"
+        "<li>Detailed signal information</li>"
+        "<li>Drag and drop DBC files</li>"
+        "</ul>"
+        "<p>Built with Qt C++</p>");
+}
+
+void MainWindow::dragEnterEvent(QDragEnterEvent *event)
+{
+    if (event->mimeData()->hasUrls()) {
+        QList<QUrl> urls = event->mimeData()->urls();
+        if (!urls.isEmpty()) {
+            QString fileName = urls.first().toLocalFile();
+            if (fileName.endsWith(".dbc", Qt::CaseInsensitive)) {
+                event->acceptProposedAction();
+                return;
+            }
+        }
+    }
+    event->ignore();
+}
+
+void MainWindow::dropEvent(QDropEvent *event)
+{
+    if (event->mimeData()->hasUrls()) {
+        QList<QUrl> urls = event->mimeData()->urls();
+        if (!urls.isEmpty()) {
+            QString fileName = urls.first().toLocalFile();
+            if (fileName.endsWith(".dbc", Qt::CaseInsensitive)) {
+                loadDbcFile(fileName);
+                event->acceptProposedAction();
+                return;
+            }
+        }
+    }
+    event->ignore();
+}

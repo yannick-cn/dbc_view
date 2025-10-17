@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="64" height="64" rx="8" fill="#2E7D32"/>
+  
+  <!-- CAN Bus symbol -->
+  <rect x="8" y="28" width="48" height="8" rx="2" fill="#4CAF50"/>
+  
+  <!-- Signal waves -->
+  <path d="M12 20 Q16 16 20 20 T28 20 T36 20 T44 20 T52 20" stroke="#81C784" stroke-width="2" fill="none"/>
+  <path d="M12 44 Q16 48 20 44 T28 44 T36 44 T44 44 T52 44" stroke="#81C784" stroke-width="2" fill="none"/>
+  
+  <!-- Data packets -->
+  <rect x="16" y="12" width="8" height="6" rx="1" fill="#C8E6C9"/>
+  <rect x="28" y="12" width="8" height="6" rx="1" fill="#C8E6C9"/>
+  <rect x="40" y="12" width="8" height="6" rx="1" fill="#C8E6C9"/>
+  
+  <rect x="16" y="46" width="8" height="6" rx="1" fill="#C8E6C9"/>
+  <rect x="28" y="46" width="8" height="6" rx="1" fill="#C8E6C9"/>
+  <rect x="40" y="46" width="8" height="6" rx="1" fill="#C8E6C9"/>
+  
+  <!-- Text -->
+  <text x="32" y="38" text-anchor="middle" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="white">DBC</text>
+</svg>
