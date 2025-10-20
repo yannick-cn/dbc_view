@@ -4,6 +4,9 @@ CanMessage::CanMessage()
     : m_id(0)
     , m_length(0)
     , m_cycleTime(0)
+    , m_cycleTimeFast(0)
+    , m_nrOfRepetitions(0)
+    , m_delayTime(0)
 {
 }
 

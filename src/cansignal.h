@@ -2,6 +2,7 @@
 #define CANSIGNAL_H
 
 #include <QString>
+#include <QStringList>
 #include <QMap>
 
 class CanSignal
@@ -20,8 +21,14 @@ public:
     double getMin() const { return m_min; }
     double getMax() const { return m_max; }
     QString getUnit() const { return m_unit; }
-    QString getReceiver() const { return m_receiver; }
+    QStringList getReceivers() const { return m_receivers; }
     QMap<int, QString> getValueTable() const { return m_valueTable; }
+    QString getDescription() const { return m_description; }
+    QString getSendType() const { return m_sendType; }
+    double getInitialValue() const { return m_initialValue; }
+    QString getInvalidValueHex() const { return m_invalidValueHex; }
+    QString getInactiveValueHex() const { return m_inactiveValueHex; }
+    QString getReceiversAsString() const;
     
     // Setters
     void setName(const QString &name) { m_name = name; }
@@ -34,8 +41,13 @@ public:
     void setMin(double min) { m_min = min; }
     void setMax(double max) { m_max = max; }
     void setUnit(const QString &unit) { m_unit = unit; }
-    void setReceiver(const QString &receiver) { m_receiver = receiver; }
+    void setReceivers(const QStringList &receivers) { m_receivers = receivers; }
     void setValueTable(const QMap<int, QString> &valueTable) { m_valueTable = valueTable; }
+    void setDescription(const QString &description) { m_description = description; }
+    void setSendType(const QString &sendType) { m_sendType = sendType; }
+    void setInitialValue(double initialValue) { m_initialValue = initialValue; }
+    void setInvalidValueHex(const QString &value) { m_invalidValueHex = value; }
+    void setInactiveValueHex(const QString &value) { m_inactiveValueHex = value; }
     
     // Utility functions
     double rawToPhysical(int rawValue) const;
@@ -53,7 +65,12 @@ private:
     double m_min;
     double m_max;
     QString m_unit;
-    QString m_receiver;
+    QStringList m_receivers;
+    QString m_description;
+    QString m_sendType;
+    double m_initialValue;
+    QString m_invalidValueHex;
+    QString m_inactiveValueHex;
     QMap<int, QString> m_valueTable; // Raw value -> Description mapping
 };
 

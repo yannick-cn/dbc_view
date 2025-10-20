@@ -9,6 +9,7 @@ CanSignal::CanSignal()
     , m_offset(0.0)
     , m_min(0.0)
     , m_max(0.0)
+    , m_initialValue(0.0)
 {
 }
 
@@ -28,4 +29,9 @@ QString CanSignal::getValueDescription(int rawValue) const
         return m_valueTable[rawValue];
     }
     return QString::number(rawValue);
+}
+
+QString CanSignal::getReceiversAsString() const
+{
+    return m_receivers.join(", ");
 }

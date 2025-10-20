@@ -1,4 +1,0 @@
-/home/jingyang/code/dbc_view/build/CMakeFiles/rebuild_cache.dir
-/home/jingyang/code/dbc_view/build/CMakeFiles/edit_cache.dir
-/home/jingyang/code/dbc_view/build/CMakeFiles/DBCViewer.dir
-/home/jingyang/code/dbc_view/build/CMakeFiles/DBCViewer_autogen.dir

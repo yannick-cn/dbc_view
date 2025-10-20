@@ -1,14 +1,22 @@
 #include "mainwindow.h"
 #include <QApplication>
+#include <QDir>
+#include <QFileInfo>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QDebug>
+
+#include <QtGlobal>
+
+#include <cmath>
+#include <limits>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , m_dbcParser(new DbcParser())
     , m_currentMessage(nullptr)
     , m_currentSignal(nullptr)
+    , m_currentDbcPath()
 {
     setupUI();
     setupMenuBar();
@@ -115,9 +123,21 @@ void MainWindow::setupMenuBar()
     openAction->setStatusTip("Open a DBC file");
     connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
     fileMenu->addAction(openAction);
-    
+
+    QAction *exportAction = new QAction("&Export to Excel...", this);
+    exportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+    exportAction->setStatusTip("Export the current DBC as an Excel workbook");
+    connect(exportAction, &QAction::triggered, this, &MainWindow::exportToExcel);
+    fileMenu->addAction(exportAction);
+
+    QAction *importAction = new QAction("&Import Excel to DBC...", this);
+    importAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
+    importAction->setStatusTip("Import an Excel workbook and generate a DBC file");
+    connect(importAction, &QAction::triggered, this, &MainWindow::importFromExcel);
+    fileMenu->addAction(importAction);
+
     fileMenu->addSeparator();
-    
+
     QAction *exitAction = new QAction("E&xit", this);
     exitAction->setShortcut(QKeySequence::Quit);
     exitAction->setStatusTip("Exit the application");
@@ -152,9 +172,109 @@ void MainWindow::openFile()
     }
 }
 
+void MainWindow::exportToExcel()
+{
+    if (m_dbcParser->getMessages().isEmpty()) {
+        QMessageBox::warning(this, "Export", "Please load a DBC file before exporting to Excel.");
+        return;
+    }
+
+    QString suggestedPath;
+    if (!m_currentDbcPath.isEmpty()) {
+        QFileInfo info(m_currentDbcPath);
+        suggestedPath = info.absolutePath() + "/" + info.completeBaseName() + ".xlsx";
+    } else {
+        suggestedPath = QDir::homePath() + "/dbc_export.xlsx";
+    }
+
+    const QString filePath = QFileDialog::getSaveFileName(this,
+        "Export to Excel", suggestedPath, "Excel Workbook (*.xlsx)");
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    QString normalizedPath = filePath;
+    if (!normalizedPath.endsWith(".xlsx", Qt::CaseInsensitive)) {
+        normalizedPath.append(".xlsx");
+    }
+
+    QString errorMessage;
+    if (!DbcExcelConverter::exportToExcel(normalizedPath,
+                                          m_dbcParser->getVersion(),
+                                          m_dbcParser->getBusType(),
+                                          m_dbcParser->getNodes(),
+                                          m_dbcParser->getMessages(),
+                                          &errorMessage)) {
+        QMessageBox::critical(this, "Export Failed", errorMessage);
+        return;
+    }
+
+    m_statusLabel->setText(QString("Exported Excel: %1").arg(QFileInfo(normalizedPath).fileName()));
+}
+
+void MainWindow::importFromExcel()
+{
+    const QString excelPath = QFileDialog::getOpenFileName(this,
+        "Import Excel to DBC", m_currentDbcPath, "Excel Workbook (*.xlsx)");
+
+    if (excelPath.isEmpty()) {
+        return;
+    }
+
+    DbcExcelConverter::ImportResult importResult;
+    QString errorMessage;
+    if (!DbcExcelConverter::importFromExcel(excelPath, importResult, &errorMessage)) {
+        QMessageBox::critical(this, "Import Failed", errorMessage);
+        importResult.clear();
+        return;
+    }
+
+    QFileInfo excelInfo(excelPath);
+    QString suggestedDbc = excelInfo.absolutePath() + "/" + excelInfo.completeBaseName() + ".dbc";
+
+    QString dbcPath = QFileDialog::getSaveFileName(this,
+        "Save Generated DBC", suggestedDbc, "DBC Files (*.dbc)");
+
+    if (dbcPath.isEmpty()) {
+        importResult.clear();
+        return;
+    }
+
+    if (!dbcPath.endsWith(".dbc", Qt::CaseInsensitive)) {
+        dbcPath.append(".dbc");
+    }
+
+    if (!DbcWriter::write(dbcPath,
+                          importResult.version,
+                          importResult.busType,
+                          importResult.nodes,
+                          importResult.messages,
+                          &errorMessage)) {
+        QMessageBox::critical(this, "Export Failed", errorMessage);
+        importResult.clear();
+        return;
+    }
+
+    importResult.clear();
+
+    m_statusLabel->setText(QString("Saved DBC: %1").arg(QFileInfo(dbcPath).fileName()));
+
+    const QMessageBox::StandardButton choice = QMessageBox::question(this,
+        "Import Complete",
+        QString("DBC file saved to %1.\nDo you want to load it now?").arg(dbcPath),
+        QMessageBox::Yes | QMessageBox::No,
+        QMessageBox::Yes);
+
+    if (choice == QMessageBox::Yes) {
+        loadDbcFile(dbcPath);
+    }
+}
+
 void MainWindow::loadDbcFile(const QString &filePath)
 {
     if (m_dbcParser->parseFile(filePath)) {
+        m_currentDbcPath = filePath;
         m_fileLabel->setText(QString("File: %1").arg(QFileInfo(filePath).fileName()));
         m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
         
@@ -176,7 +296,10 @@ void MainWindow::populateMessageTree()
         item->setText(1, message->getName());
         item->setText(2, QString::number(message->getLength()));
         item->setText(3, message->getTransmitter());
-        item->setText(4, message->getCycleTime() > 0 ? QString("%1 ms").arg(message->getCycleTime()) : "N/A");
+        const QString cycleText = message->getCycleTime() > 0
+            ? QString("%1 ms (%2)").arg(message->getCycleTime()).arg(message->getSendType().isEmpty() ? "N/A" : message->getSendType())
+            : (message->getSendType().isEmpty() ? "N/A" : message->getSendType());
+        item->setText(4, cycleText);
         
         // Store message pointer in item data
         item->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(message)));
@@ -188,7 +311,7 @@ void MainWindow::populateMessageTree()
             signalItem->setText(1, QString("Bit %1").arg(signal->getStartBit()));
             signalItem->setText(2, QString("%1 bits").arg(signal->getLength()));
             signalItem->setText(3, signal->getUnit());
-            signalItem->setText(4, signal->getReceiver());
+            signalItem->setText(4, signal->getReceiversAsString());
             
             // Store signal pointer in item data
             signalItem->setData(0, Qt::UserRole, QVariant::fromValue(static_cast<void*>(signal)));
@@ -236,32 +359,56 @@ void MainWindow::populateSignalDetails(CanSignal *signal)
     }
     
     // Signal properties
+    auto maskForLength = [](int length) -> quint64 {
+        if (length <= 0) {
+            return 0;
+        }
+        if (length >= 64) {
+            return std::numeric_limits<quint64>::max();
+        }
+        return (quint64(1) << length) - 1;
+    };
+    const quint64 initialValue = static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength());
+    const QString byteOrderText = signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB";
+    const QString receivers = signal->getReceiversAsString().isEmpty() ? "N/A" : signal->getReceiversAsString();
+    const QString sendType = signal->getSendType().isEmpty() ? "N/A" : signal->getSendType();
+    const QString invalidValue = signal->getInvalidValueHex().isEmpty() ? "-" : signal->getInvalidValueHex();
+    const QString inactiveValue = signal->getInactiveValueHex().isEmpty() ? "-" : signal->getInactiveValueHex();
+
     QString details = QString(
         "Name: %1\n"
         "Start Bit: %2\n"
         "Length: %3 bits\n"
         "Byte Order: %4\n"
         "Signed: %5\n"
-        "Factor: %6\n"
-        "Offset: %7\n"
-        "Min Value: %8\n"
-        "Max Value: %9\n"
-        "Unit: %10\n"
-        "Receiver: %11\n"
+        "Send Type: %6\n"
+        "Factor: %7\n"
+        "Offset: %8\n"
+        "Min Value: %9\n"
+        "Max Value: %10\n"
+        "Unit: %11\n"
+        "Receivers: %12\n"
+        "Initial Value (Hex): %13\n"
+        "Invalid Value (Hex): %14\n"
+        "Inactive Value (Hex): %15\n"
         "\nPhysical Value Calculation:\n"
-        "Physical = Raw × %6 + %7\n"
-        "Raw = (Physical - %7) ÷ %6"
+        "Physical = Raw × %7 + %8\n"
+        "Raw = (Physical - %8) ÷ %7"
     ).arg(signal->getName())
      .arg(signal->getStartBit())
      .arg(signal->getLength())
-     .arg(signal->getByteOrder() == 0 ? "Little Endian" : "Big Endian")
+     .arg(byteOrderText)
      .arg(signal->isSigned() ? "Yes" : "No")
+     .arg(sendType)
      .arg(signal->getFactor())
      .arg(signal->getOffset())
      .arg(signal->getMin())
      .arg(signal->getMax())
      .arg(signal->getUnit())
-     .arg(signal->getReceiver());
+     .arg(receivers)
+     .arg(QString("0x%1").arg(initialValue, 0, 16).toUpper())
+     .arg(invalidValue)
+     .arg(inactiveValue);
     
     m_signalDetails->setPlainText(details);
     

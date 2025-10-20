@@ -19,6 +19,8 @@
 #include <QDropEvent>
 #include <QMimeData>
 #include "dbcparser.h"
+#include "dbcexcelconverter.h"
+#include "dbcwriter.h"
 
 class MainWindow : public QMainWindow
 {
@@ -30,6 +32,8 @@ public:
 
 private slots:
     void openFile();
+    void exportToExcel();
+    void importFromExcel();
     void onMessageSelectionChanged();
     void onSignalSelectionChanged();
     void showAbout();
@@ -74,6 +78,7 @@ private:
     DbcParser *m_dbcParser;
     CanMessage *m_currentMessage;
     CanSignal *m_currentSignal;
+    QString m_currentDbcPath;
 };
 
 #endif // MAINWINDOW_H
