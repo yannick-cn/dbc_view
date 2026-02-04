@@ -163,6 +163,7 @@ bool DbcWriter::write(const QString &filePath,
                       const QString &busType,
                       const QStringList &nodes,
                       const QList<CanMessage*> &messages,
+                      const QString &dbComment,
                       QString *error)
 {
     QFile file(filePath);
@@ -268,6 +269,9 @@ bool DbcWriter::write(const QString &filePath,
 
     out << '\n';
 
+    if (!dbComment.isEmpty()) {
+        out << "CM_ \"" << escape(dbComment) << "\";\n";
+    }
     for (CanMessage *message : messages) {
         if (!message) {
             continue;

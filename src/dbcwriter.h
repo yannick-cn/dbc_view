@@ -15,6 +15,7 @@ public:
                       const QString &busType,
                       const QStringList &nodes,
                       const QList<CanMessage*> &messages,
+                      const QString &dbComment = QString(),
                       QString *error = nullptr);
 };
 
