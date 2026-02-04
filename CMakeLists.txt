@@ -4,8 +4,14 @@ project(DBCViewer)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Find Qt5
-find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
+# Find Qt6 first, fall back to Qt5 (cross-platform: Linux, Windows, macOS)
+find_package(Qt6 QUIET COMPONENTS Core Widgets)
+if(Qt6_FOUND)
+    set(QT_VERSION_MAJOR 6)
+else()
+    find_package(Qt5 REQUIRED COMPONENTS Core Widgets)
+    set(QT_VERSION_MAJOR 5)
+endif()
 
 # Enable Qt MOC
 set(CMAKE_AUTOMOC ON)
@@ -41,7 +47,11 @@ set(HEADERS
 add_executable(DBCViewer ${SOURCES} ${HEADERS})
 
 # Link Qt libraries
-target_link_libraries(DBCViewer Qt5::Core Qt5::Widgets)
+if(QT_VERSION_MAJOR EQUAL 6)
+    target_link_libraries(DBCViewer Qt6::Core Qt6::Widgets)
+else()
+    target_link_libraries(DBCViewer Qt5::Core Qt5::Widgets)
+endif()
 target_include_directories(DBCViewer PRIVATE src/third_party/miniz)
 
 # Set target properties
