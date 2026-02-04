@@ -1,4 +1,5 @@
 #include "dbcparser.h"
+#include "dbcexcelconverter.h"
 
 #include <QDebug>
 #include <QFile>
@@ -72,6 +73,20 @@ bool DbcParser::parseFile(const QString &filePath)
         if (!parseLine(line.trimmed())) {
             qWarning() << "Failed to parse line:" << line;
         }
+    }
+    return true;
+}
+
+bool DbcParser::loadFromExcelImport(DbcExcelConverter::ImportResult &result)
+{
+    clear();
+    m_version = result.version;
+    m_busType = result.busType;
+    m_nodes = result.nodes;
+    m_messages = result.messages;
+    result.messages.clear();
+    for (CanMessage *msg : m_messages) {
+        m_messageMap[msg->getId()] = msg;
     }
     return true;
 }
@@ -247,7 +262,7 @@ bool DbcParser::parseAttribute(const QString &line)
             const QString mapped = enumValueLookup(m_messageAttributeEnums, attrName, valuePart.toInt());
             message->setFrameFormat(mapped.isEmpty() ? valuePart : mapped);
             message->setMessageType(normalizeFrameFormat(message->getFrameFormat()));
-        } else if (attrName == "GenMsgNrOfRepetitions") {
+        } else if (attrName == "GenMsgNrOfRepetitions" || attrName == "GenMsgNrOfRepetition") {
             message->setNrOfRepetitions(valuePart.toInt());
         } else if (attrName == "GenMsgDelayTime") {
             message->setDelayTime(valuePart.toInt());

@@ -6,14 +6,16 @@
 #include <QList>
 #include <QMap>
 #include "canmessage.h"
+#include "dbcexcelconverter.h"
 
 class DbcParser
 {
 public:
     DbcParser();
     ~DbcParser();
-    
+
     bool parseFile(const QString &filePath);
+    bool loadFromExcelImport(DbcExcelConverter::ImportResult &result);
     const QList<CanMessage*> &getMessages() const { return m_messages; }
     CanMessage* getMessage(int id) const;
     QString getVersion() const { return m_version; }

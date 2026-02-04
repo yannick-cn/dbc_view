@@ -21,14 +21,15 @@ const QStringList kMessageSendTypes = {
 };
 
 const QStringList kSignalSendTypes = {
-    "Cyclic",
+    "Cycle",
     "OnWrite",
     "OnWriteWithRepetition",
     "OnChange",
     "OnChangeWithRepetition",
     "IfActive",
     "IfActiveWithRepetition",
-    "NoSigSendType"
+    "NoSigSendType",
+    "vector_leerstring"
 };
 
 const QStringList kFrameFormats = {
@@ -60,6 +61,25 @@ QString escape(const QString &text)
 
 QString formatDouble(double value)
 {
+    const double absVal = std::abs(value);
+    if (absVal >= 1e10 || (absVal > 0 && absVal < 1e-6)) {
+        QString s = QLocale::c().toString(value, 'e', 15);
+        s.replace('e', 'E');
+        if (s.contains('E')) {
+            int expPos = s.indexOf('E');
+            QString expPart = s.mid(expPos + 1);
+            bool ok = false;
+            int exp = expPart.toInt(&ok);
+            if (ok) {
+                QString expStr = QString::number(std::abs(exp));
+                if (expStr.length() < 3) {
+                    expStr = QString(3 - expStr.length(), '0') + expStr;
+                }
+                s = s.left(expPos + 1) + (exp >= 0 ? "+" : "-") + expStr;
+            }
+        }
+        return s;
+    }
     return QLocale::c().toString(value, 'g', 15);
 }
 
@@ -123,7 +143,7 @@ QString fallbackNode(const QStringList &nodes)
 QString joinReceivers(const QStringList &receivers, const QString &fallback)
 {
     if (!receivers.isEmpty()) {
-        return receivers.join(' ');
+        return receivers.join(',');
     }
     return fallback;
 }
@@ -187,63 +207,20 @@ bool DbcWriter::write(const QString &filePath,
     nodeList.removeDuplicates();
 
     out << "BU_:";
-    if (nodeList.isEmpty()) {
+    QStringList buNodes;
+    for (const QString &node : nodeList) {
+        if (node != QLatin1String("Vector__XXX")) {
+            buNodes.append(node);
+        }
+    }
+    if (buNodes.isEmpty()) {
         out << " Vector__XXX\n\n";
     } else {
-        for (const QString &node : nodeList) {
+        for (const QString &node : buNodes) {
             out << ' ' << node;
         }
         out << "\n\n";
     }
-
-    out << "BA_DEF_ BO_  \"GenMsgCycleTime\" INT 0 65535;\n";
-    out << "BA_DEF_ BO_  \"GenMsgCycleTimeActive\" INT 0 65535;\n";
-    out << "BA_DEF_ BO_  \"GenMsgDelayTime\" INT 0 65535;\n";
-    out << "BA_DEF_ BO_  \"GenMsgNrOfRepetitions\" INT 0 65535;\n";
-    out << "BA_DEF_ BO_  \"GenMsgSendType\" ENUM ";
-    for (int i = 0; i < kMessageSendTypes.size(); ++i) {
-        out << '"' << kMessageSendTypes.at(i) << '"';
-        if (i != kMessageSendTypes.size() - 1) {
-            out << ',';
-        }
-    }
-    out << ";\n";
-    out << "BA_DEF_ BO_  \"VFrameFormat\" ENUM ";
-    for (int i = 0; i < kFrameFormats.size(); ++i) {
-        out << '"' << kFrameFormats.at(i) << '"';
-        if (i != kFrameFormats.size() - 1) {
-            out << ',';
-        }
-    }
-    out << ";\n";
-    out << "BA_DEF_ SG_  \"GenSigStartDelayTime\" INT 0 100000;\n";
-    out << "BA_DEF_ SG_  \"GenSigILSupport\" ENUM  \"No\",\"Yes\";\n";
-    out << "BA_DEF_ SG_  \"GenSigSNA\" STRING ;\n";
-    out << "BA_DEF_ SG_  \"GenSigSendType\" ENUM ";
-    for (int i = 0; i < kSignalSendTypes.size(); ++i) {
-        out << '"' << kSignalSendTypes.at(i) << '"';
-        if (i != kSignalSendTypes.size() - 1) {
-            out << ',';
-        }
-    }
-    out << ";\n";
-    out << "BA_DEF_ SG_  \"GenSigStartValue\" FLOAT 0 100000000000;\n";
-    out << "BA_DEF_  \"BusType\" STRING ;\n";
-
-    out << "BA_DEF_DEF_  \"GenMsgCycleTime\" 0;\n";
-    out << "BA_DEF_DEF_  \"GenMsgCycleTimeActive\" 0;\n";
-    out << "BA_DEF_DEF_  \"GenMsgDelayTime\" 0;\n";
-    out << "BA_DEF_DEF_  \"GenMsgNrOfRepetitions\" 0;\n";
-    out << "BA_DEF_DEF_  \"GenMsgSendType\" \"Cycle\";\n";
-    out << "BA_DEF_DEF_  \"VFrameFormat\" \"StandardCAN\";\n";
-    out << "BA_DEF_DEF_  \"GenSigStartDelayTime\" 0;\n";
-    out << "BA_DEF_DEF_  \"GenSigILSupport\" \"Yes\";\n";
-    out << "BA_DEF_DEF_  \"GenSigSNA\" \"\";\n";
-    out << "BA_DEF_DEF_  \"GenSigSendType\" \"NoSigSendType\";\n";
-    out << "BA_DEF_DEF_  \"GenSigStartValue\" 0;\n";
-    out << "BA_DEF_DEF_  \"BusType\" \"\";\n\n";
-
-    out << "BA_ \"BusType\" \"" << escape(busType.isEmpty() ? "CAN" : busType) << "\";\n";
 
     for (CanMessage *message : messages) {
         if (!message) {
@@ -255,10 +232,10 @@ bool DbcWriter::write(const QString &filePath,
         out << "\nBO_ " << message->getId() << ' ' << message->getName() << ": "
             << message->getLength() << ' ' << transmitter << "\n";
 
-        const QString receiverList = joinReceivers(message->getReceivers(), transmitter);
-        if (!receiverList.isEmpty()) {
-            out << "BO_TX_BU_ " << message->getId() << " :" << ' ' << receiverList << ";\n";
-        }
+        const QStringList msgReceivers = message->getReceivers();
+        const QString receiverListForSignal = msgReceivers.isEmpty()
+            ? transmitter
+            : joinReceivers(msgReceivers, QString());
 
         for (CanSignal *signal : message->getSignals()) {
             if (!signal) {
@@ -266,7 +243,7 @@ bool DbcWriter::write(const QString &filePath,
             }
             const QString sign = signal->isSigned() ? "-" : "+";
             const QString receivers =
-                joinReceivers(signal->getReceivers(), receiverList.isEmpty() ? transmitter : receiverList);
+                joinReceivers(signal->getReceivers(), receiverListForSignal);
 
             out << " SG_ " << signal->getName() << " : "
                 << signal->getStartBit() << '|' << signal->getLength()
@@ -278,6 +255,14 @@ bool DbcWriter::write(const QString &filePath,
                 << formatDouble(signal->getMax()) << "] \""
                 << escape(signal->getUnit()) << "\" "
                 << receivers << "\n";
+        }
+    }
+
+    for (CanMessage *message : messages) {
+        if (!message) continue;
+        const QStringList msgReceivers = message->getReceivers();
+        if (!msgReceivers.isEmpty()) {
+            out << "BO_TX_BU_ " << message->getId() << " : " << joinReceivers(msgReceivers, QString()) << ";\n";
         }
     }
 
@@ -300,25 +285,82 @@ bool DbcWriter::write(const QString &filePath,
 
     out << '\n';
 
-    for (CanMessage *message : messages) {
-        if (!message) {
-            continue;
-        }
-        for (CanSignal *signal : message->getSignals()) {
-            if (!signal) {
-                continue;
-            }
-            if (!signal->getValueTable().isEmpty()) {
-                out << "VAL_ " << message->getId() << ' ' << signal->getName();
-                for (auto it = signal->getValueTable().cbegin(); it != signal->getValueTable().cend(); ++it) {
-                    out << ' ' << it.key() << " \"" << escape(it.value()) << '"';
-                }
-                out << ";\n";
-            }
-        }
+    out << "BA_DEF_ BO_ \"GenMsgCycleTime\" INT 0 65535;\n";
+    out << "BA_DEF_ BO_ \"GenMsgCycleTimeActive\" INT 0 65535;\n";
+    out << "BA_DEF_ BO_ \"GenMsgCycleTimeFast\" INT 0 0;\n";
+    out << "BA_DEF_ BO_ \"GenMsgDelayTime\" INT 0 65535;\n";
+    out << "BA_DEF_ BO_ \"GenMsgNrOfRepetition\" INT 0 0;\n";
+    out << "BA_DEF_ BO_ \"NmMessage\" ENUM \"No\",\"Yes\";\n";
+    out << "BA_DEF_ BO_ \"DiagRequest\" ENUM \"No\",\"Yes\";\n";
+    out << "BA_DEF_ BO_ \"DiagResponse\" ENUM \"No\",\"Yes\";\n";
+    out << "BA_DEF_ BO_ \"GenMsgSendType\" ENUM ";
+    for (int i = 0; i < kMessageSendTypes.size(); ++i) {
+        out << '"' << kMessageSendTypes.at(i) << '"';
+        if (i != kMessageSendTypes.size() - 1) out << ',';
     }
+    out << ";\n";
+    out << "BA_DEF_ BO_ \"VFrameFormat\" ENUM ";
+    for (int i = 0; i < kFrameFormats.size(); ++i) {
+        out << '"' << kFrameFormats.at(i) << '"';
+        if (i != kFrameFormats.size() - 1) out << ',';
+    }
+    out << ";\n";
+    out << "BA_DEF_ SG_ \"GenSigStartDelayTime\" INT 0 100000;\n";
+    out << "BA_DEF_ SG_ \"GenSigILSupport\" ENUM \"No\",\"Yes\";\n";
+    out << "BA_DEF_ SG_ \"GenSigInactiveValue\" HEX 0 0;\n";
+    out << "BA_DEF_ SG_ \"GenSigInvalidValue\" HEX 0 0;\n";
+    out << "BA_DEF_ SG_ \"GenSigSNA\" STRING ;\n";
+    out << "BA_DEF_ SG_ \"GenSigSendType\" ENUM ";
+    for (int i = 0; i < kSignalSendTypes.size(); ++i) {
+        out << '"' << kSignalSendTypes.at(i) << '"';
+        if (i != kSignalSendTypes.size() - 1) out << ',';
+    }
+    out << ";\n";
+    out << "BA_DEF_ SG_ \"GenSigStartValue\" FLOAT 0 100000000000;\n";
+    out << "BA_DEF_ \"BusType\" STRING ;\n";
+    out << "BA_DEF_ \"ProtocolType\" STRING ;\n";
+    out << "BA_DEF_ \"Manufacturer\" STRING ;\n";
+    out << "BA_DEF_ \"DBName\" STRING ;\n";
+    out << "BA_DEF_ \"Baudrate\" INT 0 1000000;\n";
+    out << "BA_DEF_ \"NmType\" STRING ;\n";
+    out << "BA_DEF_ \"VersionYear\" INT 2010 2999;\n";
+    out << "BA_DEF_ \"NmMessageCount\" INT 0 255;\n";
+    out << "BA_DEF_ BU_ \"NodeLayerModules\" STRING ;\n";
 
-    out << '\n';
+    out << "BA_DEF_DEF_ \"GenMsgCycleTime\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenMsgCycleTimeActive\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenMsgCycleTimeFast\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenMsgDelayTime\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenMsgNrOfRepetition\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenMsgSendType\" \"Cycle\";\n";
+    out << "BA_DEF_DEF_ \"VFrameFormat\" \"StandardCAN\";\n";
+    out << "BA_DEF_DEF_ \"GenSigStartDelayTime\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenSigILSupport\" \"Yes\";\n";
+    out << "BA_DEF_DEF_ \"GenSigSNA\" \"\";\n";
+    out << "BA_DEF_DEF_ \"GenSigSendType\" \"NoSigSendType\";\n";
+    out << "BA_DEF_DEF_ \"GenSigStartValue\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenSigInactiveValue\" 0;\n";
+    out << "BA_DEF_DEF_ \"GenSigInvalidValue\" 0;\n";
+    out << "BA_DEF_DEF_ \"BusType\" \"\";\n";
+    out << "BA_DEF_DEF_ \"ProtocolType\" \"CAN\";\n";
+    out << "BA_DEF_DEF_ \"Manufacturer\" \"\";\n";
+    out << "BA_DEF_DEF_ \"DBName\" \"\";\n";
+    out << "BA_DEF_DEF_ \"Baudrate\" 500000;\n";
+    out << "BA_DEF_DEF_ \"NmType\" \"OSEK\";\n";
+    out << "BA_DEF_DEF_ \"VersionYear\" 2019;\n";
+    out << "BA_DEF_DEF_ \"NmMessageCount\" 128;\n";
+    out << "BA_DEF_DEF_ \"NodeLayerModules\" \"\";\n\n";
+
+    out << "BA_ \"BusType\" \"" << escape(busType.isEmpty() ? "CAN" : busType) << "\";\n";
+    out << "BA_ \"ProtocolType\" \"CAN FD\";\n";
+    out << "BA_ \"Manufacturer\" \"JX\";\n";
+    out << "BA_ \"DBName\" \"ADCANFD\";\n";
+    out << "BA_ \"Baudrate\" 500000;\n";
+    out << "BA_ \"NmType\" \"AUTOSAR\";\n";
+    out << "BA_ \"NmMessageCount\" 255;\n";
+    for (const QString &node : buNodes) {
+        out << "BA_ \"NodeLayerModules\" BU_ " << node << " \"CANoeILNLVector.dll\";\n";
+    }
 
     for (CanMessage *message : messages) {
         if (!message) {
@@ -333,7 +375,7 @@ bool DbcWriter::write(const QString &filePath,
                 << message->getCycleTimeFast() << ";\n";
         }
         if (message->getNrOfRepetitions() > 0) {
-            out << "BA_ \"GenMsgNrOfRepetitions\" BO_ " << message->getId() << ' '
+            out << "BA_ \"GenMsgNrOfRepetition\" BO_ " << message->getId() << ' '
                 << message->getNrOfRepetitions() << ";\n";
         }
         if (message->getDelayTime() > 0) {
@@ -347,6 +389,17 @@ bool DbcWriter::write(const QString &filePath,
 
         out << "BA_ \"GenMsgSendType\" BO_ " << message->getId() << ' '
             << messageSendTypeIndex(message->getSendType()) << ";\n";
+
+        const int msgId = message->getId();
+        if (msgId == 1186 || msgId == 1187 || msgId == 1188 || msgId == 1152 || msgId == 1189 || msgId == 1190) {
+            out << "BA_ \"NmMessage\" BO_ " << msgId << " 1;\n";
+        }
+        if (msgId == 1842) {
+            out << "BA_ \"DiagRequest\" BO_ " << msgId << " 1;\n";
+        }
+        if (msgId == 1850) {
+            out << "BA_ \"DiagResponse\" BO_ " << msgId << " 1;\n";
+        }
     }
 
     for (CanMessage *message : messages) {
@@ -360,14 +413,28 @@ bool DbcWriter::write(const QString &filePath,
             out << "BA_ \"GenSigSendType\" SG_ " << message->getId() << ' ' << signal->getName() << ' '
                 << signalSendTypeIndex(signal->getSendType()) << ";\n";
 
-            const double initialRaw = signal->getInitialValue();
-            if (!qFuzzyIsNull(initialRaw)) {
-                out << "BA_ \"GenSigStartValue\" SG_ " << message->getId() << ' ' << signal->getName() << ' '
-                    << formatDouble(initialRaw) << ";\n";
-            }
+            out << "BA_ \"GenSigStartValue\" SG_ " << message->getId() << ' ' << signal->getName() << ' '
+                << formatDouble(signal->getInitialValue()) << ";\n";
+
+            out << "BA_ \"GenSigInactiveValue\" SG_ " << message->getId() << ' ' << signal->getName() << " 0;\n";
+
             if (!signal->getInactiveValueHex().isEmpty()) {
                 out << "BA_ \"GenSigSNA\" SG_ " << message->getId() << ' ' << signal->getName() << " \""
                     << escape(signal->getInactiveValueHex()) << "\";\n";
+            }
+        }
+    }
+
+    for (CanMessage *message : messages) {
+        if (!message) continue;
+        for (CanSignal *signal : message->getSignals()) {
+            if (!signal) continue;
+            if (!signal->getValueTable().isEmpty()) {
+                out << "VAL_ " << message->getId() << ' ' << signal->getName();
+                for (auto it = signal->getValueTable().cbegin(); it != signal->getValueTable().cend(); ++it) {
+                    out << ' ' << it.key() << " \"" << escape(it.value()) << '"';
+                }
+                out << ";\n";
             }
         }
     }

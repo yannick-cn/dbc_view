@@ -1,0 +1,740 @@
+VERSION ""
+
+
+NS_ :
+	NS_DESC_
+	CM_
+	BA_DEF_
+	BA_
+	VAL_
+	CAT_DEF_
+	CAT_
+	FILTER
+	BA_DEF_DEF_
+	EV_DATA_
+	ENVVAR_DATA_
+	SGTYPE_
+	SGTYPE_VAL_
+	BA_DEF_SGTYPE_
+	BA_SGTYPE_
+	SIG_TYPE_REF_
+	VAL_TABLE_
+	SIG_GROUP_
+	SIG_VALTYPE_
+	SIGTYPE_VALTYPE_
+	BO_TX_BU_
+	BA_DEF_REL_
+	BA_REL_
+	BA_DEF_DEF_REL_
+	BU_SG_REL_
+	BU_EV_REL_
+	BU_BO_REL_
+	SG_MUL_VAL_
+
+BS_:
+
+BU_: FLSDR ADAS FDR GW FRSDR RLSDR RRSDR Tester
+
+
+BO_ 821 ADAS_FrP22_335: 8 ADAS
+ SG_ ADAS_Plt_Cfg_FCTASetResp : 29|2@0+ (1,0) [0|3] "" FLSDR
+
+BO_ 1186 FDR_NM_4A2: 8 FDR
+ SG_ FDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ FDR_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ FDR_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ FDR_NormOperSt : 22|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ FDR_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 812 FLSDR_FrP01_32C: 8 FLSDR
+ SG_ FLSDR_FCTA_Warng_L : 23|2@0+ (1,0) [0|3] "" ADAS,GW
+
+BO_ 1187 FLSDR_NM_4A3: 8 FLSDR
+ SG_ FLSDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_RptFromSleep : 16|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_RptFromPrep : 17|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_NormFromRpt : 18|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_NormFromRdySleep : 19|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_RptFromRdySleep : 20|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_RptFromNormal : 21|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_NormOperSt : 22|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+
+BO_ 1482 FLSDR_FrP02_5CA: 8 FLSDR
+ SG_ FLSDR_ECUVer : 7|16@0+ (1,0) [0|65535] "" Vector__XXX
+
+BO_ 1730 Diag_DTCInfo_FLSDR: 8 FLSDR
+ SG_ Diag_DTCInfo_FLSDR : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" GW,Tester
+
+BO_ 1850 Diag_PhyResp_FLSDR: 8 FLSDR
+ SG_ Diag_PhyResp_FLSDR : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" GW,Tester
+
+BO_ 1188 FRSDR_NM_4A4: 8 FRSDR
+ SG_ FRSDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ FRSDR_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ FRSDR_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ FRSDR_NormOperSt : 22|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ FRSDR_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 170 VCU_FrP01_AA: 32 GW
+ SG_ VCU_FrP01_AA_CRC_1 : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ VCU_AccrPedlPosnInv : 11|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ VCU_FrP01_AA_RC_1 : 15|4@0+ (1,0) [0|15] "" FLSDR
+ SG_ VCU_AccrPedlPosn : 23|8@0+ (0.4,0) [0|102] "" FLSDR
+ SG_ VCU_FrP01_AA_CRC_2 : 71|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ VCU_FrP01_AA_RC_2 : 79|4@0+ (1,0) [0|15] "" FLSDR
+ SG_ VCU_VLCECGPOvrd : 87|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 802 VCU_FrP08_322: 8 GW
+ SG_ VCU_FrP08_322_CRC : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ VCU_FrP08_322_RC : 15|4@0+ (1,0) [0|15] "" FLSDR
+ SG_ VCU_ShiftStsV : 18|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ VCU_ShiftSts : 23|3@0+ (1,0) [0|7] "" FLSDR
+
+BO_ 848 BCM_FrP02_350: 8 GW
+ SG_ BCM_VehWMd : 35|3@0+ (1,0) [0|7] "" FLSDR
+ SG_ BCM_VehUsgMd : 42|3@0+ (1,0) [0|7] "" FLSDR
+ SG_ BCM_VehPwrMd : 47|2@0+ (1,0) [0|3] "" FLSDR
+
+BO_ 850 BCM_FrP04_352: 8 GW
+ SG_ BCM_LHTurnLampON : 8|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ BCM_HzrdLampFctActv : 17|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ BCM_RHTurnLampON : 23|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ BCM_ReFogLampOn : 25|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 851 BCM_FrP05_353: 8 GW
+ SG_ BCM_FRDoorOpenSt : 9|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ BCM_FLDoorOpenSt : 11|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ BCM_VehLckSt : 18|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ BCM_BonnetOpenSts : 19|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ BCM_RRDoorOpenSt : 21|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ BCM_RLDoorOpenSt : 23|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ BCM_TalgtOpenSt : 39|2@0+ (1,0) [0|3] "" FLSDR
+
+BO_ 1152 GW_NM_480: 8 GW
+ SG_ GW_SrceNodID : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ GW_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ GW_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ GW_NormOperSt : 22|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ GW_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 1466 BCM_FrP08_5BA: 8 GW
+ SG_ BCM_VINDig17_1 : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_2 : 15|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_3 : 23|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_4 : 31|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_5 : 39|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_6 : 47|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_7 : 55|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_8 : 63|8@0+ (1,0) [0|255] "" FLSDR
+
+BO_ 1467 BCM_FrP13_5BB: 8 GW
+ SG_ BCM_VINDig17_9 : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_10 : 15|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_11 : 23|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_12 : 31|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_13 : 39|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_14 : 47|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_15 : 55|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ BCM_VINDig17_16 : 63|8@0+ (1,0) [0|255] "" FLSDR
+
+BO_ 1468 BCM_FrP14_5BC: 8 GW
+ SG_ BCM_VINDig17_17 : 7|8@0+ (1,0) [0|255] "" FLSDR
+
+BO_ 1472 TBox_FrP02_5C0: 8 GW
+ SG_ TBox_VehTimeTyp : 23|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ TBox_VehTimeYear : 31|8@0+ (1,2000) [2000|2255] "Year" FLSDR
+ SG_ TBox_VehTimeDay : 35|5@0+ (1,0) [0|31] "日" FLSDR
+ SG_ TBox_VehTimeMonth : 39|4@0+ (1,0) [0|15] "" FLSDR
+ SG_ TBox_VehTimeHour : 46|5@0+ (1,0) [0|31] "h" FLSDR
+ SG_ TBox_VehTimeMinute : 55|6@0+ (1,0) [0|63] "Min" FLSDR
+ SG_ TBox_VehTimeV : 57|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ TBox_VehTimeSec : 63|6@0+ (1,0) [0|63] "S" FLSDR
+
+BO_ 1842 Diag_PhyReq_FLSDR: 8 GW
+ SG_ Diag_PhyReq_FLSDR : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
+
+BO_ 2015 Diag_FuncReq_7DF: 8 GW
+ SG_ Diag_FuncReq_7DF : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
+
+BO_ 1189 RLSDR_NM_4A5: 8 RLSDR
+ SG_ RLSDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ RLSDR_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ RLSDR_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ RLSDR_NormOperSt : 22|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ RLSDR_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 1190 RRSDR_NM_4A6: 8 RRSDR
+ SG_ RRSDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FLSDR
+ SG_ RRSDR_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ RRSDR_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ RRSDR_NormOperSt : 22|1@0+ (1,0) [0|1] "" FLSDR
+ SG_ RRSDR_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 860 TBox_FrP06_35C: 8 GW
+ SG_ TBox_FOTAMd : 31|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ TBox_FOTAChrgCtrl : 29|2@0+ (1,0) [0|3] "" FLSDR
+ SG_ TBox_FOTATrgt : 27|4@0+ (1,0) [0|15] "" FLSDR
+
+BO_ 1285 VTM_FrP01_505: 8 GW
+ SG_ VTM_TralrSts : 23|1@0+ (1,0) [0|1] "" FLSDR
+BO_TX_BU_ 1842 : GW,Tester;
+BO_TX_BU_ 2015 : GW,Tester;
+
+CM_ BO_ 821 "高阶ADAS发送";
+CM_ SG_ 821 ADAS_Plt_Cfg_FCTASetResp "（高阶）前方侧向来车预警开关反馈";
+CM_ SG_ 1186 FDR_SrceNodID "Source Node ID";
+CM_ SG_ 1186 FDR_RptMsgReq "Repeat Message Request Bit";
+CM_ SG_ 1186 FDR_ActvWkUp "Active Wakeup";
+CM_ SG_ 1186 FDR_NormOperSt "Normal Operation State";
+CM_ SG_ 1186 FDR_RptMsgSt "Repeat Message State";
+CM_ SG_ 812 FLSDR_FCTA_Warng_L "（高阶）左侧FCTA报警";
+CM_ SG_ 1187 FLSDR_SrceNodID "Source Node ID";
+CM_ SG_ 1187 FLSDR_RptMsgReq "Repeat Message Request Bit";
+CM_ SG_ 1187 FLSDR_ActvWkUp "Active Wakeup";
+CM_ SG_ 1187 FLSDR_RptFromSleep "From  Bus Sleep Mode to Repeat Message State";
+CM_ SG_ 1187 FLSDR_RptFromPrep "From Prepare  Bus Sleep Mode to Repeat Message State";
+CM_ SG_ 1187 FLSDR_NormFromRpt "From  Repeat Message State to Normal Operation State";
+CM_ SG_ 1187 FLSDR_NormFromRdySleep "From  Ready  Sleep  State to Normal  Operation State";
+CM_ SG_ 1187 FLSDR_RptFromRdySleep "From Ready Sleep State to Repeat Message State";
+CM_ SG_ 1187 FLSDR_RptFromNormal "From  Normal Operation State to Repeat Message State";
+CM_ SG_ 1187 FLSDR_NormOperSt "Normal Operation State";
+CM_ SG_ 1187 FLSDR_RptMsgSt "Repeat Message State";
+CM_ SG_ 1188 FRSDR_SrceNodID "Source Node ID";
+CM_ SG_ 1188 FRSDR_RptMsgReq "Repeat Message Request Bit";
+CM_ SG_ 1188 FRSDR_ActvWkUp "Active Wakeup";
+CM_ SG_ 1188 FRSDR_NormOperSt "Normal Operation State";
+CM_ SG_ 1188 FRSDR_RptMsgSt "Repeat Message State";
+CM_ SG_ 170 VCU_AccrPedlPosnInv "Accelerator Pedal Position Invalid";
+CM_ SG_ 170 VCU_AccrPedlPosn "Accelerator Pedal Position ";
+CM_ SG_ 170 VCU_VLCECGPOvrd "驾驶员请求扭矩大于ACC请求扭矩";
+CM_ SG_ 802 VCU_ShiftStsV "Shift Status Valid";
+CM_ SG_ 802 VCU_ShiftSts "Shift Status";
+CM_ SG_ 848 BCM_VehWMd "整车工作模式";
+CM_ SG_ 848 BCM_VehUsgMd "整车用户模式信号";
+CM_ SG_ 848 BCM_VehPwrMd "整车电源模式信号";
+CM_ SG_ 850 BCM_HzrdLampFctActv "危险警报状态";
+CM_ SG_ 851 BCM_FRDoorOpenSt "右前门状态";
+CM_ SG_ 851 BCM_FLDoorOpenSt "左前门状态";
+CM_ SG_ 851 BCM_VehLckSt "中控锁状态";
+CM_ SG_ 851 BCM_BonnetOpenSts "前机舱盖状态";
+CM_ SG_ 851 BCM_RRDoorOpenSt "右后门状态";
+CM_ SG_ 851 BCM_RLDoorOpenSt "左后门状态";
+CM_ SG_ 851 BCM_TalgtOpenSt "后备箱状态";
+CM_ SG_ 1152 GW_SrceNodID "Source Node ID";
+CM_ SG_ 1152 GW_RptMsgReq "Repeat Message Request Bit";
+CM_ SG_ 1152 GW_ActvWkUp "Active Wakeup";
+CM_ SG_ 1152 GW_NormOperSt "Normal Operation State";
+CM_ SG_ 1152 GW_RptMsgSt "Repeat Message State";
+CM_ SG_ 1466 BCM_VINDig17_1 "车辆VIN码17_1";
+CM_ SG_ 1466 BCM_VINDig17_2 "车辆VIN码17_2";
+CM_ SG_ 1466 BCM_VINDig17_3 "车辆VIN码17_3";
+CM_ SG_ 1466 BCM_VINDig17_4 "车辆VIN码17_4";
+CM_ SG_ 1466 BCM_VINDig17_5 "车辆VIN码17_5";
+CM_ SG_ 1466 BCM_VINDig17_6 "车辆VIN码17_6";
+CM_ SG_ 1466 BCM_VINDig17_7 "车辆VIN码17_7";
+CM_ SG_ 1466 BCM_VINDig17_8 "车辆VIN码17_8";
+CM_ SG_ 1467 BCM_VINDig17_9 "车辆VIN码17_9";
+CM_ SG_ 1467 BCM_VINDig17_10 "车辆VIN码17_10";
+CM_ SG_ 1467 BCM_VINDig17_11 "车辆VIN码17_11";
+CM_ SG_ 1467 BCM_VINDig17_12 "车辆VIN码17_12";
+CM_ SG_ 1467 BCM_VINDig17_13 "车辆VIN码17_13";
+CM_ SG_ 1467 BCM_VINDig17_14 "车辆VIN码17_14";
+CM_ SG_ 1467 BCM_VINDig17_15 "车辆VIN码17_15";
+CM_ SG_ 1467 BCM_VINDig17_16 "车辆VIN码17_16";
+CM_ SG_ 1468 BCM_VINDig17_17 "车辆VIN码17_17";
+CM_ SG_ 1472 TBox_VehTimeTyp "类型-整车时间";
+CM_ SG_ 1472 TBox_VehTimeYear "年-整车时间";
+CM_ SG_ 1472 TBox_VehTimeDay "日-整车时间";
+CM_ SG_ 1472 TBox_VehTimeMonth "月-整车时间";
+CM_ SG_ 1472 TBox_VehTimeHour "时-整车时间";
+CM_ SG_ 1472 TBox_VehTimeMinute "分-整车时间";
+CM_ SG_ 1472 TBox_VehTimeV "时间有效性";
+CM_ SG_ 1472 TBox_VehTimeSec "秒-整车时间";
+CM_ SG_ 1189 RLSDR_SrceNodID "Source Node ID";
+CM_ SG_ 1189 RLSDR_RptMsgReq "Repeat Message Request Bit";
+CM_ SG_ 1189 RLSDR_ActvWkUp "Active Wakeup";
+CM_ SG_ 1189 RLSDR_NormOperSt "Normal Operation State";
+CM_ SG_ 1189 RLSDR_RptMsgSt "Repeat Message State";
+CM_ SG_ 1190 RRSDR_SrceNodID "Source Node ID";
+CM_ SG_ 1190 RRSDR_RptMsgReq "Repeat Message Request Bit";
+CM_ SG_ 1190 RRSDR_ActvWkUp "Active Wakeup";
+CM_ SG_ 1190 RRSDR_NormOperSt "Normal Operation State";
+CM_ SG_ 1190 RRSDR_RptMsgSt "Repeat Message State";
+CM_ SG_ 860 TBox_FOTAMd "FOTA模式信号";
+CM_ SG_ 860 TBox_FOTAChrgCtrl "FOTA补电控制信号";
+CM_ SG_ 860 TBox_FOTATrgt "FOTA目标信号";
+CM_ SG_ 1285 VTM_TralrSts "拖挂车状态";
+
+BA_DEF_ BO_ "GenMsgCycleTime" INT 0 65535;
+BA_DEF_ BO_ "GenMsgCycleTimeActive" INT 0 65535;
+BA_DEF_ BO_ "GenMsgCycleTimeFast" INT 0 0;
+BA_DEF_ BO_ "GenMsgDelayTime" INT 0 65535;
+BA_DEF_ BO_ "GenMsgNrOfRepetition" INT 0 0;
+BA_DEF_ BO_ "NmMessage" ENUM "No","Yes";
+BA_DEF_ BO_ "DiagRequest" ENUM "No","Yes";
+BA_DEF_ BO_ "DiagResponse" ENUM "No","Yes";
+BA_DEF_ BO_ "GenMsgSendType" ENUM "Cycle","OnChange","OnWrite","OnWriteWithRepetition","OnChangeWithRepetition","IfActive","IfActiveWithRepetition","NoMsgSendType";
+BA_DEF_ BO_ "VFrameFormat" ENUM "StandardCAN","ExtendedCAN","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","reserved","StandardCAN_FD","ExtendedCAN_FD";
+BA_DEF_ SG_ "GenSigStartDelayTime" INT 0 100000;
+BA_DEF_ SG_ "GenSigILSupport" ENUM "No","Yes";
+BA_DEF_ SG_ "GenSigInactiveValue" HEX 0 0;
+BA_DEF_ SG_ "GenSigInvalidValue" HEX 0 0;
+BA_DEF_ SG_ "GenSigSNA" STRING ;
+BA_DEF_ SG_ "GenSigSendType" ENUM "Cycle","OnWrite","OnWriteWithRepetition","OnChange","OnChangeWithRepetition","IfActive","IfActiveWithRepetition","NoSigSendType","vector_leerstring";
+BA_DEF_ SG_ "GenSigStartValue" FLOAT 0 100000000000;
+BA_DEF_ "BusType" STRING ;
+BA_DEF_ "ProtocolType" STRING ;
+BA_DEF_ "Manufacturer" STRING ;
+BA_DEF_ "DBName" STRING ;
+BA_DEF_ "Baudrate" INT 0 1000000;
+BA_DEF_ "NmType" STRING ;
+BA_DEF_ "VersionYear" INT 2010 2999;
+BA_DEF_ "NmMessageCount" INT 0 255;
+BA_DEF_ BU_ "NodeLayerModules" STRING ;
+BA_DEF_DEF_ "GenMsgCycleTime" 0;
+BA_DEF_DEF_ "GenMsgCycleTimeActive" 0;
+BA_DEF_DEF_ "GenMsgCycleTimeFast" 0;
+BA_DEF_DEF_ "GenMsgDelayTime" 0;
+BA_DEF_DEF_ "GenMsgNrOfRepetition" 0;
+BA_DEF_DEF_ "GenMsgSendType" "Cycle";
+BA_DEF_DEF_ "VFrameFormat" "StandardCAN";
+BA_DEF_DEF_ "GenSigStartDelayTime" 0;
+BA_DEF_DEF_ "GenSigILSupport" "Yes";
+BA_DEF_DEF_ "GenSigSNA" "";
+BA_DEF_DEF_ "GenSigSendType" "NoSigSendType";
+BA_DEF_DEF_ "GenSigStartValue" 0;
+BA_DEF_DEF_ "GenSigInactiveValue" 0;
+BA_DEF_DEF_ "GenSigInvalidValue" 0;
+BA_DEF_DEF_ "BusType" "";
+BA_DEF_DEF_ "ProtocolType" "CAN";
+BA_DEF_DEF_ "Manufacturer" "";
+BA_DEF_DEF_ "DBName" "";
+BA_DEF_DEF_ "Baudrate" 500000;
+BA_DEF_DEF_ "NmType" "OSEK";
+BA_DEF_DEF_ "VersionYear" 2019;
+BA_DEF_DEF_ "NmMessageCount" 128;
+BA_DEF_DEF_ "NodeLayerModules" "";
+
+BA_ "BusType" "CAN FD";
+BA_ "ProtocolType" "CAN FD";
+BA_ "Manufacturer" "JX";
+BA_ "DBName" "ADCANFD";
+BA_ "Baudrate" 500000;
+BA_ "NmType" "AUTOSAR";
+BA_ "NmMessageCount" 255;
+BA_ "NodeLayerModules" BU_ FLSDR "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ ADAS "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ FDR "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ GW "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ FRSDR "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ RLSDR "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ RRSDR "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ Tester "CANoeILNLVector.dll";
+BA_ "GenMsgCycleTime" BO_ 821 100;
+BA_ "VFrameFormat" BO_ 821 14;
+BA_ "GenMsgSendType" BO_ 821 0;
+BA_ "GenMsgCycleTime" BO_ 1186 500;
+BA_ "GenMsgCycleTimeFast" BO_ 1186 20;
+BA_ "GenMsgNrOfRepetition" BO_ 1186 10;
+BA_ "VFrameFormat" BO_ 1186 14;
+BA_ "GenMsgSendType" BO_ 1186 0;
+BA_ "NmMessage" BO_ 1186 1;
+BA_ "GenMsgCycleTime" BO_ 812 100;
+BA_ "VFrameFormat" BO_ 812 14;
+BA_ "GenMsgSendType" BO_ 812 0;
+BA_ "GenMsgCycleTime" BO_ 1187 500;
+BA_ "GenMsgCycleTimeFast" BO_ 1187 20;
+BA_ "GenMsgNrOfRepetition" BO_ 1187 10;
+BA_ "VFrameFormat" BO_ 1187 14;
+BA_ "GenMsgSendType" BO_ 1187 0;
+BA_ "NmMessage" BO_ 1187 1;
+BA_ "GenMsgCycleTime" BO_ 1482 1000;
+BA_ "VFrameFormat" BO_ 1482 14;
+BA_ "GenMsgSendType" BO_ 1482 0;
+BA_ "VFrameFormat" BO_ 1730 14;
+BA_ "GenMsgSendType" BO_ 1730 0;
+BA_ "VFrameFormat" BO_ 1850 14;
+BA_ "GenMsgSendType" BO_ 1850 0;
+BA_ "DiagResponse" BO_ 1850 1;
+BA_ "GenMsgCycleTime" BO_ 1188 500;
+BA_ "GenMsgCycleTimeFast" BO_ 1188 20;
+BA_ "GenMsgNrOfRepetition" BO_ 1188 10;
+BA_ "VFrameFormat" BO_ 1188 14;
+BA_ "GenMsgSendType" BO_ 1188 0;
+BA_ "NmMessage" BO_ 1188 1;
+BA_ "GenMsgCycleTime" BO_ 170 10;
+BA_ "VFrameFormat" BO_ 170 14;
+BA_ "GenMsgSendType" BO_ 170 0;
+BA_ "GenMsgCycleTime" BO_ 802 100;
+BA_ "VFrameFormat" BO_ 802 14;
+BA_ "GenMsgSendType" BO_ 802 0;
+BA_ "GenMsgCycleTime" BO_ 848 100;
+BA_ "VFrameFormat" BO_ 848 14;
+BA_ "GenMsgSendType" BO_ 848 0;
+BA_ "GenMsgCycleTime" BO_ 850 100;
+BA_ "VFrameFormat" BO_ 850 14;
+BA_ "GenMsgSendType" BO_ 850 0;
+BA_ "GenMsgCycleTime" BO_ 851 100;
+BA_ "VFrameFormat" BO_ 851 14;
+BA_ "GenMsgSendType" BO_ 851 0;
+BA_ "GenMsgCycleTime" BO_ 1152 500;
+BA_ "GenMsgCycleTimeFast" BO_ 1152 20;
+BA_ "GenMsgNrOfRepetition" BO_ 1152 10;
+BA_ "VFrameFormat" BO_ 1152 14;
+BA_ "GenMsgSendType" BO_ 1152 0;
+BA_ "NmMessage" BO_ 1152 1;
+BA_ "GenMsgCycleTime" BO_ 1466 1000;
+BA_ "VFrameFormat" BO_ 1466 14;
+BA_ "GenMsgSendType" BO_ 1466 0;
+BA_ "GenMsgCycleTime" BO_ 1467 1000;
+BA_ "VFrameFormat" BO_ 1467 14;
+BA_ "GenMsgSendType" BO_ 1467 0;
+BA_ "GenMsgCycleTime" BO_ 1468 1000;
+BA_ "VFrameFormat" BO_ 1468 14;
+BA_ "GenMsgSendType" BO_ 1468 0;
+BA_ "GenMsgCycleTime" BO_ 1472 1000;
+BA_ "VFrameFormat" BO_ 1472 14;
+BA_ "GenMsgSendType" BO_ 1472 0;
+BA_ "VFrameFormat" BO_ 1842 14;
+BA_ "GenMsgSendType" BO_ 1842 0;
+BA_ "DiagRequest" BO_ 1842 1;
+BA_ "VFrameFormat" BO_ 2015 14;
+BA_ "GenMsgSendType" BO_ 2015 0;
+BA_ "GenMsgCycleTime" BO_ 1189 500;
+BA_ "GenMsgCycleTimeFast" BO_ 1189 20;
+BA_ "GenMsgNrOfRepetition" BO_ 1189 10;
+BA_ "VFrameFormat" BO_ 1189 14;
+BA_ "GenMsgSendType" BO_ 1189 0;
+BA_ "NmMessage" BO_ 1189 1;
+BA_ "GenMsgCycleTime" BO_ 1190 500;
+BA_ "GenMsgCycleTimeFast" BO_ 1190 20;
+BA_ "GenMsgNrOfRepetition" BO_ 1190 10;
+BA_ "VFrameFormat" BO_ 1190 14;
+BA_ "GenMsgSendType" BO_ 1190 0;
+BA_ "NmMessage" BO_ 1190 1;
+BA_ "GenMsgCycleTime" BO_ 860 100;
+BA_ "VFrameFormat" BO_ 860 14;
+BA_ "GenMsgSendType" BO_ 860 0;
+BA_ "GenMsgCycleTime" BO_ 1285 200;
+BA_ "VFrameFormat" BO_ 1285 14;
+BA_ "GenMsgSendType" BO_ 1285 0;
+BA_ "GenSigSendType" SG_ 821 ADAS_Plt_Cfg_FCTASetResp 0;
+BA_ "GenSigStartValue" SG_ 821 ADAS_Plt_Cfg_FCTASetResp 0;
+BA_ "GenSigInactiveValue" SG_ 821 ADAS_Plt_Cfg_FCTASetResp 0;
+BA_ "GenSigSendType" SG_ 1186 FDR_SrceNodID 0;
+BA_ "GenSigStartValue" SG_ 1186 FDR_SrceNodID 0;
+BA_ "GenSigInactiveValue" SG_ 1186 FDR_SrceNodID 0;
+BA_ "GenSigSendType" SG_ 1186 FDR_RptMsgReq 0;
+BA_ "GenSigStartValue" SG_ 1186 FDR_RptMsgReq 0;
+BA_ "GenSigInactiveValue" SG_ 1186 FDR_RptMsgReq 0;
+BA_ "GenSigSendType" SG_ 1186 FDR_ActvWkUp 0;
+BA_ "GenSigStartValue" SG_ 1186 FDR_ActvWkUp 0;
+BA_ "GenSigInactiveValue" SG_ 1186 FDR_ActvWkUp 0;
+BA_ "GenSigSendType" SG_ 1186 FDR_NormOperSt 0;
+BA_ "GenSigStartValue" SG_ 1186 FDR_NormOperSt 0;
+BA_ "GenSigInactiveValue" SG_ 1186 FDR_NormOperSt 0;
+BA_ "GenSigSendType" SG_ 1186 FDR_RptMsgSt 0;
+BA_ "GenSigStartValue" SG_ 1186 FDR_RptMsgSt 0;
+BA_ "GenSigInactiveValue" SG_ 1186 FDR_RptMsgSt 0;
+BA_ "GenSigSendType" SG_ 812 FLSDR_FCTA_Warng_L 0;
+BA_ "GenSigStartValue" SG_ 812 FLSDR_FCTA_Warng_L 0;
+BA_ "GenSigInactiveValue" SG_ 812 FLSDR_FCTA_Warng_L 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_SrceNodID 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_SrceNodID 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_SrceNodID 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_RptMsgReq 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_RptMsgReq 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_RptMsgReq 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_ActvWkUp 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_ActvWkUp 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_ActvWkUp 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_RptFromSleep 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_RptFromSleep 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_RptFromSleep 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_RptFromPrep 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_RptFromPrep 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_RptFromPrep 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_NormFromRpt 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_NormFromRpt 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_NormFromRpt 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_NormFromRdySleep 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_NormFromRdySleep 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_NormFromRdySleep 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_RptFromRdySleep 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_RptFromRdySleep 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_RptFromRdySleep 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_RptFromNormal 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_RptFromNormal 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_RptFromNormal 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_NormOperSt 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_NormOperSt 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_NormOperSt 0;
+BA_ "GenSigSendType" SG_ 1187 FLSDR_RptMsgSt 0;
+BA_ "GenSigStartValue" SG_ 1187 FLSDR_RptMsgSt 0;
+BA_ "GenSigInactiveValue" SG_ 1187 FLSDR_RptMsgSt 0;
+BA_ "GenSigSendType" SG_ 1482 FLSDR_ECUVer 0;
+BA_ "GenSigStartValue" SG_ 1482 FLSDR_ECUVer 0;
+BA_ "GenSigInactiveValue" SG_ 1482 FLSDR_ECUVer 0;
+BA_ "GenSigSendType" SG_ 1730 Diag_DTCInfo_FLSDR 1;
+BA_ "GenSigStartValue" SG_ 1730 Diag_DTCInfo_FLSDR 0;
+BA_ "GenSigInactiveValue" SG_ 1730 Diag_DTCInfo_FLSDR 0;
+BA_ "GenSigSendType" SG_ 1850 Diag_PhyResp_FLSDR 1;
+BA_ "GenSigStartValue" SG_ 1850 Diag_PhyResp_FLSDR 0;
+BA_ "GenSigInactiveValue" SG_ 1850 Diag_PhyResp_FLSDR 0;
+BA_ "GenSigSendType" SG_ 1188 FRSDR_SrceNodID 0;
+BA_ "GenSigStartValue" SG_ 1188 FRSDR_SrceNodID 0;
+BA_ "GenSigInactiveValue" SG_ 1188 FRSDR_SrceNodID 0;
+BA_ "GenSigSendType" SG_ 1188 FRSDR_RptMsgReq 0;
+BA_ "GenSigStartValue" SG_ 1188 FRSDR_RptMsgReq 0;
+BA_ "GenSigInactiveValue" SG_ 1188 FRSDR_RptMsgReq 0;
+BA_ "GenSigSendType" SG_ 1188 FRSDR_ActvWkUp 0;
+BA_ "GenSigStartValue" SG_ 1188 FRSDR_ActvWkUp 0;
+BA_ "GenSigInactiveValue" SG_ 1188 FRSDR_ActvWkUp 0;
+BA_ "GenSigSendType" SG_ 1188 FRSDR_NormOperSt 0;
+BA_ "GenSigStartValue" SG_ 1188 FRSDR_NormOperSt 0;
+BA_ "GenSigInactiveValue" SG_ 1188 FRSDR_NormOperSt 0;
+BA_ "GenSigSendType" SG_ 1188 FRSDR_RptMsgSt 0;
+BA_ "GenSigStartValue" SG_ 1188 FRSDR_RptMsgSt 0;
+BA_ "GenSigInactiveValue" SG_ 1188 FRSDR_RptMsgSt 0;
+BA_ "GenSigSendType" SG_ 170 VCU_FrP01_AA_CRC_1 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_FrP01_AA_CRC_1 0;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_FrP01_AA_CRC_1 0;
+BA_ "GenSigSendType" SG_ 170 VCU_AccrPedlPosnInv 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_AccrPedlPosnInv 1;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_AccrPedlPosnInv 0;
+BA_ "GenSigSendType" SG_ 170 VCU_FrP01_AA_RC_1 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_FrP01_AA_RC_1 0;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_FrP01_AA_RC_1 0;
+BA_ "GenSigSendType" SG_ 170 VCU_AccrPedlPosn 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_AccrPedlPosn 0;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_AccrPedlPosn 0;
+BA_ "GenSigSendType" SG_ 170 VCU_FrP01_AA_CRC_2 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_FrP01_AA_CRC_2 0;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_FrP01_AA_CRC_2 0;
+BA_ "GenSigSendType" SG_ 170 VCU_FrP01_AA_RC_2 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_FrP01_AA_RC_2 0;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_FrP01_AA_RC_2 0;
+BA_ "GenSigSendType" SG_ 170 VCU_VLCECGPOvrd 0;
+BA_ "GenSigStartValue" SG_ 170 VCU_VLCECGPOvrd 0;
+BA_ "GenSigInactiveValue" SG_ 170 VCU_VLCECGPOvrd 0;
+BA_ "GenSigSendType" SG_ 802 VCU_FrP08_322_CRC 0;
+BA_ "GenSigStartValue" SG_ 802 VCU_FrP08_322_CRC 0;
+BA_ "GenSigInactiveValue" SG_ 802 VCU_FrP08_322_CRC 0;
+BA_ "GenSigSendType" SG_ 802 VCU_FrP08_322_RC 0;
+BA_ "GenSigStartValue" SG_ 802 VCU_FrP08_322_RC 0;
+BA_ "GenSigInactiveValue" SG_ 802 VCU_FrP08_322_RC 0;
+BA_ "GenSigSendType" SG_ 802 VCU_ShiftStsV 0;
+BA_ "GenSigStartValue" SG_ 802 VCU_ShiftStsV 0;
+BA_ "GenSigInactiveValue" SG_ 802 VCU_ShiftStsV 0;
+BA_ "GenSigSendType" SG_ 802 VCU_ShiftSts 0;
+BA_ "GenSigStartValue" SG_ 802 VCU_ShiftSts 0;
+BA_ "GenSigInactiveValue" SG_ 802 VCU_ShiftSts 0;
+BA_ "GenSigSendType" SG_ 848 BCM_VehWMd 0;
+BA_ "GenSigStartValue" SG_ 848 BCM_VehWMd 5;
+BA_ "GenSigInactiveValue" SG_ 848 BCM_VehWMd 0;
+BA_ "GenSigSendType" SG_ 848 BCM_VehUsgMd 0;
+BA_ "GenSigStartValue" SG_ 848 BCM_VehUsgMd 1;
+BA_ "GenSigInactiveValue" SG_ 848 BCM_VehUsgMd 0;
+BA_ "GenSigSendType" SG_ 848 BCM_VehPwrMd 0;
+BA_ "GenSigStartValue" SG_ 848 BCM_VehPwrMd 0;
+BA_ "GenSigInactiveValue" SG_ 848 BCM_VehPwrMd 0;
+BA_ "GenSigSendType" SG_ 850 BCM_LHTurnLampON 0;
+BA_ "GenSigStartValue" SG_ 850 BCM_LHTurnLampON 0;
+BA_ "GenSigInactiveValue" SG_ 850 BCM_LHTurnLampON 0;
+BA_ "GenSigSendType" SG_ 850 BCM_HzrdLampFctActv 0;
+BA_ "GenSigStartValue" SG_ 850 BCM_HzrdLampFctActv 0;
+BA_ "GenSigInactiveValue" SG_ 850 BCM_HzrdLampFctActv 0;
+BA_ "GenSigSendType" SG_ 850 BCM_RHTurnLampON 0;
+BA_ "GenSigStartValue" SG_ 850 BCM_RHTurnLampON 0;
+BA_ "GenSigInactiveValue" SG_ 850 BCM_RHTurnLampON 0;
+BA_ "GenSigSendType" SG_ 850 BCM_ReFogLampOn 0;
+BA_ "GenSigStartValue" SG_ 850 BCM_ReFogLampOn 0;
+BA_ "GenSigInactiveValue" SG_ 850 BCM_ReFogLampOn 0;
+BA_ "GenSigSendType" SG_ 851 BCM_FRDoorOpenSt 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_FRDoorOpenSt 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_FRDoorOpenSt 0;
+BA_ "GenSigSendType" SG_ 851 BCM_FLDoorOpenSt 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_FLDoorOpenSt 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_FLDoorOpenSt 0;
+BA_ "GenSigSendType" SG_ 851 BCM_VehLckSt 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_VehLckSt 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_VehLckSt 0;
+BA_ "GenSigSendType" SG_ 851 BCM_BonnetOpenSts 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_BonnetOpenSts 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_BonnetOpenSts 0;
+BA_ "GenSigSendType" SG_ 851 BCM_RRDoorOpenSt 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_RRDoorOpenSt 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_RRDoorOpenSt 0;
+BA_ "GenSigSendType" SG_ 851 BCM_RLDoorOpenSt 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_RLDoorOpenSt 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_RLDoorOpenSt 0;
+BA_ "GenSigSendType" SG_ 851 BCM_TalgtOpenSt 0;
+BA_ "GenSigStartValue" SG_ 851 BCM_TalgtOpenSt 0;
+BA_ "GenSigInactiveValue" SG_ 851 BCM_TalgtOpenSt 0;
+BA_ "GenSigSendType" SG_ 1152 GW_SrceNodID 0;
+BA_ "GenSigStartValue" SG_ 1152 GW_SrceNodID 0;
+BA_ "GenSigInactiveValue" SG_ 1152 GW_SrceNodID 0;
+BA_ "GenSigSendType" SG_ 1152 GW_RptMsgReq 0;
+BA_ "GenSigStartValue" SG_ 1152 GW_RptMsgReq 0;
+BA_ "GenSigInactiveValue" SG_ 1152 GW_RptMsgReq 0;
+BA_ "GenSigSendType" SG_ 1152 GW_ActvWkUp 0;
+BA_ "GenSigStartValue" SG_ 1152 GW_ActvWkUp 0;
+BA_ "GenSigInactiveValue" SG_ 1152 GW_ActvWkUp 0;
+BA_ "GenSigSendType" SG_ 1152 GW_NormOperSt 0;
+BA_ "GenSigStartValue" SG_ 1152 GW_NormOperSt 0;
+BA_ "GenSigInactiveValue" SG_ 1152 GW_NormOperSt 0;
+BA_ "GenSigSendType" SG_ 1152 GW_RptMsgSt 0;
+BA_ "GenSigStartValue" SG_ 1152 GW_RptMsgSt 0;
+BA_ "GenSigInactiveValue" SG_ 1152 GW_RptMsgSt 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_1 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_1 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_1 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_2 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_2 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_2 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_3 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_3 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_3 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_4 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_4 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_4 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_5 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_5 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_5 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_6 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_6 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_6 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_7 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_7 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_7 0;
+BA_ "GenSigSendType" SG_ 1466 BCM_VINDig17_8 0;
+BA_ "GenSigStartValue" SG_ 1466 BCM_VINDig17_8 0;
+BA_ "GenSigInactiveValue" SG_ 1466 BCM_VINDig17_8 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_9 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_9 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_9 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_10 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_10 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_10 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_11 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_11 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_11 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_12 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_12 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_12 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_13 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_13 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_13 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_14 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_14 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_14 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_15 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_15 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_15 0;
+BA_ "GenSigSendType" SG_ 1467 BCM_VINDig17_16 0;
+BA_ "GenSigStartValue" SG_ 1467 BCM_VINDig17_16 0;
+BA_ "GenSigInactiveValue" SG_ 1467 BCM_VINDig17_16 0;
+BA_ "GenSigSendType" SG_ 1468 BCM_VINDig17_17 0;
+BA_ "GenSigStartValue" SG_ 1468 BCM_VINDig17_17 0;
+BA_ "GenSigInactiveValue" SG_ 1468 BCM_VINDig17_17 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeTyp 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeTyp 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeTyp 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeYear 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeYear 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeYear 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeDay 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeDay 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeDay 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeMonth 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeMonth 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeMonth 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeHour 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeHour 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeHour 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeMinute 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeMinute 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeMinute 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeV 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeV 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeV 0;
+BA_ "GenSigSendType" SG_ 1472 TBox_VehTimeSec 0;
+BA_ "GenSigStartValue" SG_ 1472 TBox_VehTimeSec 0;
+BA_ "GenSigInactiveValue" SG_ 1472 TBox_VehTimeSec 0;
+BA_ "GenSigSendType" SG_ 1842 Diag_PhyReq_FLSDR 1;
+BA_ "GenSigStartValue" SG_ 1842 Diag_PhyReq_FLSDR 0;
+BA_ "GenSigInactiveValue" SG_ 1842 Diag_PhyReq_FLSDR 0;
+BA_ "GenSigSendType" SG_ 2015 Diag_FuncReq_7DF 1;
+BA_ "GenSigStartValue" SG_ 2015 Diag_FuncReq_7DF 0;
+BA_ "GenSigInactiveValue" SG_ 2015 Diag_FuncReq_7DF 0;
+BA_ "GenSigSendType" SG_ 1189 RLSDR_SrceNodID 0;
+BA_ "GenSigStartValue" SG_ 1189 RLSDR_SrceNodID 0;
+BA_ "GenSigInactiveValue" SG_ 1189 RLSDR_SrceNodID 0;
+BA_ "GenSigSendType" SG_ 1189 RLSDR_RptMsgReq 0;
+BA_ "GenSigStartValue" SG_ 1189 RLSDR_RptMsgReq 0;
+BA_ "GenSigInactiveValue" SG_ 1189 RLSDR_RptMsgReq 0;
+BA_ "GenSigSendType" SG_ 1189 RLSDR_ActvWkUp 0;
+BA_ "GenSigStartValue" SG_ 1189 RLSDR_ActvWkUp 0;
+BA_ "GenSigInactiveValue" SG_ 1189 RLSDR_ActvWkUp 0;
+BA_ "GenSigSendType" SG_ 1189 RLSDR_NormOperSt 0;
+BA_ "GenSigStartValue" SG_ 1189 RLSDR_NormOperSt 0;
+BA_ "GenSigInactiveValue" SG_ 1189 RLSDR_NormOperSt 0;
+BA_ "GenSigSendType" SG_ 1189 RLSDR_RptMsgSt 0;
+BA_ "GenSigStartValue" SG_ 1189 RLSDR_RptMsgSt 0;
+BA_ "GenSigInactiveValue" SG_ 1189 RLSDR_RptMsgSt 0;
+BA_ "GenSigSendType" SG_ 1190 RRSDR_SrceNodID 0;
+BA_ "GenSigStartValue" SG_ 1190 RRSDR_SrceNodID 0;
+BA_ "GenSigInactiveValue" SG_ 1190 RRSDR_SrceNodID 0;
+BA_ "GenSigSendType" SG_ 1190 RRSDR_RptMsgReq 0;
+BA_ "GenSigStartValue" SG_ 1190 RRSDR_RptMsgReq 0;
+BA_ "GenSigInactiveValue" SG_ 1190 RRSDR_RptMsgReq 0;
+BA_ "GenSigSendType" SG_ 1190 RRSDR_ActvWkUp 0;
+BA_ "GenSigStartValue" SG_ 1190 RRSDR_ActvWkUp 0;
+BA_ "GenSigInactiveValue" SG_ 1190 RRSDR_ActvWkUp 0;
+BA_ "GenSigSendType" SG_ 1190 RRSDR_NormOperSt 0;
+BA_ "GenSigStartValue" SG_ 1190 RRSDR_NormOperSt 0;
+BA_ "GenSigInactiveValue" SG_ 1190 RRSDR_NormOperSt 0;
+BA_ "GenSigSendType" SG_ 1190 RRSDR_RptMsgSt 0;
+BA_ "GenSigStartValue" SG_ 1190 RRSDR_RptMsgSt 0;
+BA_ "GenSigInactiveValue" SG_ 1190 RRSDR_RptMsgSt 0;
+BA_ "GenSigSendType" SG_ 860 TBox_FOTAMd 0;
+BA_ "GenSigStartValue" SG_ 860 TBox_FOTAMd 0;
+BA_ "GenSigInactiveValue" SG_ 860 TBox_FOTAMd 0;
+BA_ "GenSigSendType" SG_ 860 TBox_FOTAChrgCtrl 0;
+BA_ "GenSigStartValue" SG_ 860 TBox_FOTAChrgCtrl 0;
+BA_ "GenSigInactiveValue" SG_ 860 TBox_FOTAChrgCtrl 0;
+BA_ "GenSigSendType" SG_ 860 TBox_FOTATrgt 0;
+BA_ "GenSigStartValue" SG_ 860 TBox_FOTATrgt 0;
+BA_ "GenSigInactiveValue" SG_ 860 TBox_FOTATrgt 0;
+BA_ "GenSigSendType" SG_ 1285 VTM_TralrSts 0;
+BA_ "GenSigStartValue" SG_ 1285 VTM_TralrSts 0;
+BA_ "GenSigInactiveValue" SG_ 1285 VTM_TralrSts 0;
+VAL_ 821 ADAS_Plt_Cfg_FCTASetResp 0 "No Response" 1 "ON" 2 "OFF" 3 "Reserved";
+VAL_ 812 FLSDR_FCTA_Warng_L 0 "No warning" 1 "Warning level 1" 2 "Warning level 2" 3 "Reserved";
+VAL_ 170 VCU_AccrPedlPosnInv 0 "Normal" 1 "Invalid";
+VAL_ 170 VCU_VLCECGPOvrd 0 "Invalid" 1 "Valid";
+VAL_ 802 VCU_ShiftStsV 0 "Invalid" 1 "Valid";
+VAL_ 802 VCU_ShiftSts 0 "init" 1 "P" 2 "R" 3 "N" 4 "D";
+VAL_ 848 BCM_VehWMd 3 "Service Mode" 4 "Showroom Mode" 5 "Normal Mode";
+VAL_ 848 BCM_VehUsgMd 0 "Slee(Reservd)" 1 "OFF" 2 "ON" 4 "Normal Driving" 5 "Automated Driving" 6 "Reserve" 7 "Reserve";
+VAL_ 848 BCM_VehPwrMd 0 "OFF" 2 "Run" 3 "Crank";
+VAL_ 850 BCM_LHTurnLampON 0 "False" 1 "True";
+VAL_ 850 BCM_HzrdLampFctActv 0 "False" 1 "True";
+VAL_ 850 BCM_RHTurnLampON 0 "False" 1 "True";
+VAL_ 850 BCM_ReFogLampOn 0 "False" 1 "True";
+VAL_ 851 BCM_FRDoorOpenSt 0 "Closed" 1 "Open(For latch switch can not detect door ajar status)（reserve）" 2 "Ajar（reserve）" 3 "Full Open";
+VAL_ 851 BCM_FLDoorOpenSt 0 "Closed" 1 "Open(For latch switch can not detect door ajar status)（reserve）" 2 "Ajar（reserve）" 3 "Full Open";
+VAL_ 851 BCM_VehLckSt 0 "All Door Unlocked" 1 "Drive door Unlocked, other door locked" 2 "All Door Locked" 3 "Reserved";
+VAL_ 851 BCM_BonnetOpenSts 0 "Close" 1 "Open";
+VAL_ 851 BCM_RRDoorOpenSt 0 "Closed" 1 "Open(For latch switch can not detect door ajar status)（reserve）" 2 "Ajar（reserve）" 3 "Full Open";
+VAL_ 851 BCM_RLDoorOpenSt 0 "Closed" 1 "Open(For latch switch can not detect door ajar status)（reserve）" 2 "Ajar（reserve）" 3 "Full Open";
+VAL_ 851 BCM_TalgtOpenSt 0 "Closed" 1 "Open(For latch switch can not detect door ajar status)（reserve）" 2 "Ajar（reserve)" 3 "Full Open";
+VAL_ 1472 TBox_VehTimeTyp 0 "UTC Time" 1 "Beijing Time (UTC+8)";
+VAL_ 1472 TBox_VehTimeV 0 "Valid" 1 "Invalid";
+VAL_ 860 TBox_FOTAMd 0 "non FOTA" 1 "FOTA" 2 "Reserve" 3 "Reserve";
+VAL_ 860 TBox_FOTAChrgCtrl 0 "no Charging" 1 "Charging" 2 "Reserve" 3 "Reserve";
+VAL_ 860 TBox_FOTATrgt 0 "default" 1 "common ECU" 2 "GW/BCM/BSK/ICM" 3 "Reserve" 4 "Reserve" 5 "Reserve" 6 "Reserve" 7 "Reserve" 8 "Reserve" 9 "Reserve" 10 "Reserve" 11 "Reserve" 12 "Reserve" 13 "Reserve" 14 "Reserve" 15 "Reserve";
+VAL_ 1285 VTM_TralrSts 0 "No Trailor" 1 "Trailor Towed";

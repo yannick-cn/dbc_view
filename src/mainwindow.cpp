@@ -4,6 +4,7 @@
 #include <QFileInfo>
 #include <QHeaderView>
 #include <QMessageBox>
+#include <QScreen>
 #include <QDebug>
 
 #include <QtGlobal>
@@ -25,7 +26,16 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowTitle("DBC Viewer");
     setMinimumSize(1000, 700);
     resize(1200, 800);
-    
+
+    // Center window on screen
+    QScreen *screen = QApplication::primaryScreen();
+    if (screen) {
+        QRect screenGeometry = screen->availableGeometry();
+        int x = screenGeometry.x() + (screenGeometry.width() - width()) / 2;
+        int y = screenGeometry.y() + (screenGeometry.height() - height()) / 2;
+        move(x, y);
+    }
+
     // Enable drag and drop
     setAcceptDrops(true);
 }
@@ -118,23 +128,23 @@ void MainWindow::setupMenuBar()
     // File menu
     QMenu *fileMenu = menuBar->addMenu("&File");
     
-    QAction *openAction = new QAction("&Open DBC File...", this);
+    QAction *openAction = new QAction("&Open File...", this);
     openAction->setShortcut(QKeySequence::Open);
-    openAction->setStatusTip("Open a DBC file");
+    openAction->setStatusTip("Open a DBC or Excel file");
     connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
     fileMenu->addAction(openAction);
 
-    QAction *exportAction = new QAction("&Export to Excel...", this);
-    exportAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
-    exportAction->setStatusTip("Export the current DBC as an Excel workbook");
-    connect(exportAction, &QAction::triggered, this, &MainWindow::exportToExcel);
-    fileMenu->addAction(exportAction);
+    QAction *exportExcelAction = new QAction("Export to &Excel...", this);
+    exportExcelAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+    exportExcelAction->setStatusTip("Export the current DBC as an Excel workbook");
+    connect(exportExcelAction, &QAction::triggered, this, &MainWindow::exportToExcel);
+    fileMenu->addAction(exportExcelAction);
 
-    QAction *importAction = new QAction("&Import Excel to DBC...", this);
-    importAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_I));
-    importAction->setStatusTip("Import an Excel workbook and generate a DBC file");
-    connect(importAction, &QAction::triggered, this, &MainWindow::importFromExcel);
-    fileMenu->addAction(importAction);
+    QAction *exportDbcAction = new QAction("Export to &DBC...", this);
+    exportDbcAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
+    exportDbcAction->setStatusTip("Export the current DBC to a new DBC file");
+    connect(exportDbcAction, &QAction::triggered, this, &MainWindow::exportToDbc);
+    fileMenu->addAction(exportDbcAction);
 
     fileMenu->addSeparator();
 
@@ -164,10 +174,36 @@ void MainWindow::setupStatusBar()
 
 void MainWindow::openFile()
 {
-    QString fileName = QFileDialog::getOpenFileName(this,
-        "Open DBC File", "", "DBC Files (*.dbc);;All Files (*)");
-    
-    if (!fileName.isEmpty()) {
+    QString initialDir;
+    if (!m_currentDbcPath.isEmpty()) {
+        QFileInfo info(m_currentDbcPath);
+        initialDir = info.absolutePath();
+    } else {
+        initialDir = QDir::homePath();
+    }
+
+    const QString fileName = QFileDialog::getOpenFileName(this,
+        "Open File", initialDir,
+        "DBC Files (*.dbc);;Excel Workbook (*.xlsx);;All Files (*)");
+
+    if (fileName.isEmpty()) {
+        return;
+    }
+
+    if (fileName.endsWith(".xlsx", Qt::CaseInsensitive)) {
+        DbcExcelConverter::ImportResult importResult;
+        QString errorMessage;
+        if (!DbcExcelConverter::importFromExcel(fileName, importResult, &errorMessage)) {
+            QMessageBox::critical(this, "Open Failed", errorMessage);
+            return;
+        }
+        m_dbcParser->loadFromExcelImport(importResult);
+        m_currentDbcPath = fileName;
+        m_fileLabel->setText(QString("File: %1").arg(QFileInfo(fileName).fileName()));
+        m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
+        populateMessageTree();
+        clearViews();
+    } else {
         loadDbcFile(fileName);
     }
 }
@@ -213,62 +249,45 @@ void MainWindow::exportToExcel()
     m_statusLabel->setText(QString("Exported Excel: %1").arg(QFileInfo(normalizedPath).fileName()));
 }
 
-void MainWindow::importFromExcel()
+void MainWindow::exportToDbc()
 {
-    const QString excelPath = QFileDialog::getOpenFileName(this,
-        "Import Excel to DBC", m_currentDbcPath, "Excel Workbook (*.xlsx)");
-
-    if (excelPath.isEmpty()) {
+    if (m_dbcParser->getMessages().isEmpty()) {
+        QMessageBox::warning(this, "Export", "Please load a DBC file before exporting to DBC.");
         return;
     }
 
-    DbcExcelConverter::ImportResult importResult;
+    QString suggestedPath;
+    if (!m_currentDbcPath.isEmpty()) {
+        QFileInfo info(m_currentDbcPath);
+        suggestedPath = info.absolutePath() + "/" + info.completeBaseName() + "_export.dbc";
+    } else {
+        suggestedPath = QDir::homePath() + "/dbc_export.dbc";
+    }
+
+    const QString filePath = QFileDialog::getSaveFileName(this,
+        "Export to DBC", suggestedPath, "DBC Files (*.dbc);;All Files (*)");
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    QString normalizedPath = filePath;
+    if (!normalizedPath.endsWith(".dbc", Qt::CaseInsensitive)) {
+        normalizedPath.append(".dbc");
+    }
+
     QString errorMessage;
-    if (!DbcExcelConverter::importFromExcel(excelPath, importResult, &errorMessage)) {
-        QMessageBox::critical(this, "Import Failed", errorMessage);
-        importResult.clear();
-        return;
-    }
-
-    QFileInfo excelInfo(excelPath);
-    QString suggestedDbc = excelInfo.absolutePath() + "/" + excelInfo.completeBaseName() + ".dbc";
-
-    QString dbcPath = QFileDialog::getSaveFileName(this,
-        "Save Generated DBC", suggestedDbc, "DBC Files (*.dbc)");
-
-    if (dbcPath.isEmpty()) {
-        importResult.clear();
-        return;
-    }
-
-    if (!dbcPath.endsWith(".dbc", Qt::CaseInsensitive)) {
-        dbcPath.append(".dbc");
-    }
-
-    if (!DbcWriter::write(dbcPath,
-                          importResult.version,
-                          importResult.busType,
-                          importResult.nodes,
-                          importResult.messages,
+    if (!DbcWriter::write(normalizedPath,
+                          m_dbcParser->getVersion(),
+                          m_dbcParser->getBusType(),
+                          m_dbcParser->getNodes(),
+                          m_dbcParser->getMessages(),
                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
-        importResult.clear();
         return;
     }
 
-    importResult.clear();
-
-    m_statusLabel->setText(QString("Saved DBC: %1").arg(QFileInfo(dbcPath).fileName()));
-
-    const QMessageBox::StandardButton choice = QMessageBox::question(this,
-        "Import Complete",
-        QString("DBC file saved to %1.\nDo you want to load it now?").arg(dbcPath),
-        QMessageBox::Yes | QMessageBox::No,
-        QMessageBox::Yes);
-
-    if (choice == QMessageBox::Yes) {
-        loadDbcFile(dbcPath);
-    }
+    m_statusLabel->setText(QString("Exported DBC: %1").arg(QFileInfo(normalizedPath).fileName()));
 }
 
 void MainWindow::loadDbcFile(const QString &filePath)
