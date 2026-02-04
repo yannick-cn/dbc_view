@@ -522,7 +522,8 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event)
         QList<QUrl> urls = event->mimeData()->urls();
         if (!urls.isEmpty()) {
             QString fileName = urls.first().toLocalFile();
-            if (fileName.endsWith(".dbc", Qt::CaseInsensitive)) {
+            if (fileName.endsWith(".dbc", Qt::CaseInsensitive)
+                || fileName.endsWith(".xlsx", Qt::CaseInsensitive)) {
                 event->acceptProposedAction();
                 return;
             }
@@ -539,6 +540,23 @@ void MainWindow::dropEvent(QDropEvent *event)
             QString fileName = urls.first().toLocalFile();
             if (fileName.endsWith(".dbc", Qt::CaseInsensitive)) {
                 loadDbcFile(fileName);
+                event->acceptProposedAction();
+                return;
+            }
+            if (fileName.endsWith(".xlsx", Qt::CaseInsensitive)) {
+                DbcExcelConverter::ImportResult importResult;
+                QString errorMessage;
+                if (!DbcExcelConverter::importFromExcel(fileName, importResult, &errorMessage)) {
+                    QMessageBox::critical(this, "Open Failed", errorMessage);
+                    event->ignore();
+                    return;
+                }
+                m_dbcParser->loadFromExcelImport(importResult);
+                m_currentDbcPath = fileName;
+                m_fileLabel->setText(QString("File: %1").arg(QFileInfo(fileName).fileName()));
+                m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
+                populateMessageTree();
+                clearViews();
                 event->acceptProposedAction();
                 return;
             }
