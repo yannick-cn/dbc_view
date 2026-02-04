@@ -184,7 +184,7 @@ void MainWindow::openFile()
 
     const QString fileName = QFileDialog::getOpenFileName(this,
         "Open File", initialDir,
-        "DBC Files (*.dbc);;Excel Workbook (*.xlsx);;All Files (*)");
+        "DBC and Excel Files (*.dbc *.xlsx);;DBC Files (*.dbc);;Excel Workbook (*.xlsx);;All Files (*)");
 
     if (fileName.isEmpty()) {
         return;
