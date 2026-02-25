@@ -164,6 +164,7 @@ bool DbcWriter::write(const QString &filePath,
                       const QStringList &nodes,
                       const QList<CanMessage*> &messages,
                       const QString &dbComment,
+                      const QString &documentTitle,
                       QString *error)
 {
     QFile file(filePath);
@@ -325,6 +326,7 @@ bool DbcWriter::write(const QString &filePath,
     out << "BA_DEF_ \"ProtocolType\" STRING ;\n";
     out << "BA_DEF_ \"Manufacturer\" STRING ;\n";
     out << "BA_DEF_ \"DBName\" STRING ;\n";
+    out << "BA_DEF_ \"DocumentTitle\" STRING ;\n";
     out << "BA_DEF_ \"Baudrate\" INT 0 1000000;\n";
     out << "BA_DEF_ \"NmType\" STRING ;\n";
     out << "BA_DEF_ \"VersionYear\" INT 2010 2999;\n";
@@ -349,6 +351,7 @@ bool DbcWriter::write(const QString &filePath,
     out << "BA_DEF_DEF_ \"ProtocolType\" \"CAN\";\n";
     out << "BA_DEF_DEF_ \"Manufacturer\" \"\";\n";
     out << "BA_DEF_DEF_ \"DBName\" \"\";\n";
+    out << "BA_DEF_DEF_ \"DocumentTitle\" \"\";\n";
     out << "BA_DEF_DEF_ \"Baudrate\" 500000;\n";
     out << "BA_DEF_DEF_ \"NmType\" \"OSEK\";\n";
     out << "BA_DEF_DEF_ \"VersionYear\" 2019;\n";
@@ -356,6 +359,9 @@ bool DbcWriter::write(const QString &filePath,
     out << "BA_DEF_DEF_ \"NodeLayerModules\" \"\";\n\n";
 
     out << "BA_ \"BusType\" \"" << escape(busType.isEmpty() ? "CAN" : busType) << "\";\n";
+    if (!documentTitle.isEmpty()) {
+        out << "BA_ \"DocumentTitle\" \"" << escape(documentTitle) << "\";\n";
+    }
     out << "BA_ \"ProtocolType\" \"CAN FD\";\n";
     out << "BA_ \"Manufacturer\" \"JX\";\n";
     out << "BA_ \"DBName\" \"ADCANFD\";\n";

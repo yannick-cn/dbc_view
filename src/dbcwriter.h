@@ -16,6 +16,7 @@ public:
                       const QStringList &nodes,
                       const QList<CanMessage*> &messages,
                       const QString &dbComment = QString(),
+                      const QString &documentTitle = QString(),
                       QString *error = nullptr);
 };
 

@@ -13,10 +13,10 @@
 
 ## 系统要求
 
-- **跨平台支持**：Linux、Windows、macOS
-- Qt5 或 Qt6 开发环境
-- CMake 3.16 或更高版本
-- C++17 编译器
+- Linux系统
+- Qt6开发环境
+- CMake 3.16或更高版本
+- C++17编译器
 
 ## 安装依赖
 
@@ -24,7 +24,6 @@
 ```bash
 sudo apt update
 sudo apt install qt6-base-dev qt6-tools-dev cmake build-essential
-# 或使用 Qt5: sudo apt install qt5-default cmake build-essential
 ```
 
 ### CentOS/RHEL
@@ -32,14 +31,7 @@ sudo apt install qt6-base-dev qt6-tools-dev cmake build-essential
 sudo yum install qt6-qtbase-devel qt6-qttools-devel cmake gcc-c++
 ```
 
-### Windows
-1. 安装 [CMake](https://cmake.org/download/)
-2. 安装 [Qt](https://www.qt.io/download)（选择 MSVC 或 MinGW 套件）
-3. 安装 Visual Studio（若使用 MSVC）或 MinGW（若使用 MinGW 套件）
-
 ## 编译和运行
-
-### Linux / macOS
 
 1. 克隆或下载项目到本地
 2. 进入项目目录：
@@ -63,31 +55,6 @@ sudo yum install qt6-qtbase-devel qt6-qttools-devel cmake gcc-c++
    ```bash
    cd build
    ./DBCViewer
-   ```
-
-### Windows
-
-1. 进入项目目录，双击运行 `build.bat`，或在命令提示符中：
-   ```cmd
-   build.bat
-   ```
-
-2. 若 Qt 未安装在默认路径，请先设置环境变量：
-   ```cmd
-   set QT_DIR=C:\Qt\5.15.2\msvc2019_64
-   build.bat
-   ```
-   （路径请根据实际 Qt 安装位置修改）
-
-3. 运行应用程序：
-   ```cmd
-   run_dbc_viewer.bat
-   ```
-   或直接双击 `build\Release\DBCViewer.exe`（或 `build\DBCViewer.exe`）
-
-4. **首次运行**：若提示缺少 Qt DLL，请将 Qt 的 `bin` 目录加入系统 PATH，或使用 `windeployqt` 部署：
-   ```cmd
-   %QT_DIR%\bin\windeployqt build\Release\DBCViewer.exe
    ```
 
 ## 使用方法

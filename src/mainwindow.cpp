@@ -242,6 +242,7 @@ void MainWindow::exportToExcel()
                                           m_dbcParser->getBusType(),
                                           m_dbcParser->getNodes(),
                                           m_dbcParser->getMessages(),
+                                          m_dbcParser->getDocumentTitle(),
                                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
         return;
@@ -299,6 +300,7 @@ void MainWindow::exportToDbc()
                           m_dbcParser->getNodes(),
                           m_dbcParser->getMessages(),
                           dbComment,
+                          m_dbcParser->getDocumentTitle(),
                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
         return;

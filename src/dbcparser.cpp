@@ -53,6 +53,7 @@ void DbcParser::clear()
     m_nodes.clear();
     m_version.clear();
     m_busType.clear();
+    m_documentTitle.clear();
     m_messageAttributeEnums.clear();
     m_signalAttributeEnums.clear();
 }
@@ -82,6 +83,7 @@ bool DbcParser::loadFromExcelImport(DbcExcelConverter::ImportResult &result)
     clear();
     m_version = result.version;
     m_busType = result.busType;
+    m_documentTitle = result.documentTitle;
     m_nodes = result.nodes;
     m_messages = result.messages;
     result.messages.clear();
@@ -232,6 +234,13 @@ bool DbcParser::parseValueTable(const QString &line)
 
 bool DbcParser::parseAttribute(const QString &line)
 {
+    QRegularExpression docTitleRegex = makeRegex("BA_\\s+\"DocumentTitle\"\\s+\"([^\"]*)\"");
+    const QRegularExpressionMatch docTitleMatch = docTitleRegex.match(line);
+    if (docTitleMatch.hasMatch()) {
+        m_documentTitle = docTitleMatch.captured(1);
+        return true;
+    }
+
     QRegularExpression busTypeRegex = makeRegex("BA_\\s+\"BusType\"\\s+\"([^\"]+)\"");
     const QRegularExpressionMatch busMatch = busTypeRegex.match(line);
     if (busMatch.hasMatch()) {

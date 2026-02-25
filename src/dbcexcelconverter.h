@@ -14,6 +14,7 @@ public:
     {
         QString version;
         QString busType;
+        QString documentTitle;
         QStringList nodes;
         QList<CanMessage*> messages;
 
@@ -25,6 +26,7 @@ public:
                               const QString &busType,
                               const QStringList &nodes,
                               const QList<CanMessage*> &messages,
+                              const QString &documentTitle = QString(),
                               QString *error = nullptr);
 
     static bool importFromExcel(const QString &filePath,
