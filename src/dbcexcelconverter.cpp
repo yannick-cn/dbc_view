@@ -1046,7 +1046,7 @@ TableMap parseWorksheetToTable(const QByteArray &sheetXml, const QStringList &sh
                         while (!(reader.isEndElement() && reader.name() == QLatin1String("c"))) {
                             reader.readNext();
                             if (reader.isStartElement() && reader.name() == QLatin1String("t")) {
-                                value = reader.readElementText();
+                                value.append(reader.readElementText());
                             }
                         }
                     } else if (cellType == QLatin1String("s") && !sharedStrings.isEmpty()) {
@@ -1091,9 +1091,17 @@ QString titleFromCoverTable(const TableMap &table)
     std::sort(rows.begin(), rows.end());
     QStringList lines;
     for (int row : rows) {
-        const QString cell = table.value(row).value(1).trimmed();
-        if (!cell.isEmpty()) {
-            lines.append(cell);
+        QString cell = table.value(row).value(1).trimmed();
+        cell.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+        if (cell.isEmpty()) {
+            continue;
+        }
+        const QStringList parts = cell.split(QLatin1Char('\n'));
+        for (const QString &part : parts) {
+            const QString p = part.trimmed();
+            if (!p.isEmpty()) {
+                lines.append(p);
+            }
         }
     }
     return lines.join(QLatin1Char('\n'));

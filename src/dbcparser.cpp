@@ -237,7 +237,11 @@ bool DbcParser::parseAttribute(const QString &line)
     QRegularExpression docTitleRegex = makeRegex("BA_\\s+\"DocumentTitle\"\\s+\"([^\"]*)\"");
     const QRegularExpressionMatch docTitleMatch = docTitleRegex.match(line);
     if (docTitleMatch.hasMatch()) {
-        m_documentTitle = docTitleMatch.captured(1);
+        QString value = docTitleMatch.captured(1);
+        value.replace(QLatin1String("\\\\"), QLatin1String("\\"));
+        value.replace(QLatin1String("\\n"), QLatin1String("\n"));
+        value.replace(QLatin1String("\\\""), QLatin1String("\""));
+        m_documentTitle = value;
         return true;
     }
 

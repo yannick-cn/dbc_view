@@ -360,7 +360,9 @@ bool DbcWriter::write(const QString &filePath,
 
     out << "BA_ \"BusType\" \"" << escape(busType.isEmpty() ? "CAN" : busType) << "\";\n";
     if (!documentTitle.isEmpty()) {
-        out << "BA_ \"DocumentTitle\" \"" << escape(documentTitle) << "\";\n";
+        QString title = documentTitle;
+        title.replace(QLatin1Char('\n'), QLatin1String("\\n"));
+        out << "BA_ \"DocumentTitle\" \"" << escape(title) << "\";\n";
     }
     out << "BA_ \"ProtocolType\" \"CAN FD\";\n";
     out << "BA_ \"Manufacturer\" \"JX\";\n";

@@ -3,7 +3,6 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QHeaderView>
-#include <QInputDialog>
 #include <QMessageBox>
 #include <QScreen>
 #include <QDebug>
@@ -258,27 +257,12 @@ void MainWindow::exportToDbc()
         return;
     }
 
-    const QString defaultComment = QStringLiteral(
-        "DBC Version: V1.3\n"
-        "Last Modified: 2025-01-12\n"
-        "Author: ZhangSan\n"
-        "Change:\n"
-        "- Added message XXX\n"
-        "- Updated signal YYY scaling");
-    bool ok = false;
-    const QString dbComment = QInputDialog::getMultiLineText(this,
-        "Export to DBC", "Database comment (optional, leave empty to skip):",
-        defaultComment, &ok);
-    if (!ok) {
-        return;
-    }
-
     QString suggestedPath;
     if (!m_currentDbcPath.isEmpty()) {
         QFileInfo info(m_currentDbcPath);
-        suggestedPath = info.absolutePath() + "/" + info.completeBaseName() + "_export.dbc";
+        suggestedPath = info.absolutePath() + "/" + info.completeBaseName() + ".dbc";
     } else {
-        suggestedPath = QDir::homePath() + "/dbc_export.dbc";
+        suggestedPath = QDir::homePath() + "/dbc.dbc";
     }
 
     const QString filePath = QFileDialog::getSaveFileName(this,
@@ -299,7 +283,7 @@ void MainWindow::exportToDbc()
                           m_dbcParser->getBusType(),
                           m_dbcParser->getNodes(),
                           m_dbcParser->getMessages(),
-                          dbComment,
+                          QString(),
                           m_dbcParser->getDocumentTitle(),
                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
