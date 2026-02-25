@@ -947,6 +947,36 @@ QString normalizeSendType(const QString &value, bool isSignal)
     return value;
 }
 
+QStringList parseSharedStrings(const QByteArray &sstXml)
+{
+    QStringList list;
+    if (sstXml.isEmpty()) {
+        return list;
+    }
+    QXmlStreamReader reader(sstXml);
+    while (!reader.atEnd()) {
+        reader.readNext();
+        if (reader.isStartElement() && reader.name() == QLatin1String("si")) {
+            QString text;
+            while (!(reader.isEndElement() && reader.name() == QLatin1String("si"))) {
+                reader.readNext();
+                if (reader.isStartElement() && reader.name() == QLatin1String("t")) {
+                    text.append(reader.readElementText());
+                } else if (reader.isStartElement() && reader.name() == QLatin1String("r")) {
+                    while (!(reader.isEndElement() && reader.name() == QLatin1String("r"))) {
+                        reader.readNext();
+                        if (reader.isStartElement() && reader.name() == QLatin1String("t")) {
+                            text.append(reader.readElementText());
+                        }
+                    }
+                }
+            }
+            list.append(text);
+        }
+    }
+    return list;
+}
+
 QStringList splitLines(const QString &text)
 {
     QString normalized = text;
@@ -985,7 +1015,7 @@ quint64 parseHexToUInt64(const QString &text, bool *ok)
 
 using TableMap = QMap<int, QMap<int, QString>>;
 
-TableMap parseWorksheetToTable(const QByteArray &sheetXml)
+TableMap parseWorksheetToTable(const QByteArray &sheetXml, const QStringList &sharedStrings)
 {
     TableMap table;
     QXmlStreamReader reader(sheetXml);
@@ -997,6 +1027,7 @@ TableMap parseWorksheetToTable(const QByteArray &sheetXml)
                 reader.readNext();
                 if (reader.isStartElement() && reader.name() == QLatin1String("c")) {
                     const QString cellRef = reader.attributes().value("r").toString();
+                    const QString cellType = reader.attributes().value("t").toString();
                     QString letters;
                     for (const QChar ch : cellRef) {
                         if (ch.isLetter()) {
@@ -1011,12 +1042,28 @@ TableMap parseWorksheetToTable(const QByteArray &sheetXml)
                     }
 
                     QString value;
-                    if (reader.attributes().value("t") == QLatin1String("inlineStr")) {
+                    if (cellType == QLatin1String("inlineStr")) {
                         while (!(reader.isEndElement() && reader.name() == QLatin1String("c"))) {
                             reader.readNext();
                             if (reader.isStartElement() && reader.name() == QLatin1String("t")) {
                                 value = reader.readElementText();
                             }
+                        }
+                    } else if (cellType == QLatin1String("s") && !sharedStrings.isEmpty()) {
+                        while (!(reader.isEndElement() && reader.name() == QLatin1String("c"))) {
+                            reader.readNext();
+                            if (reader.isStartElement() && reader.name() == QLatin1String("v")) {
+                                const QString idxStr = reader.readElementText();
+                                bool ok = false;
+                                const int idx = idxStr.toInt(&ok);
+                                if (ok && idx >= 0 && idx < sharedStrings.size()) {
+                                    value = sharedStrings.at(idx);
+                                }
+                                break;
+                            }
+                        }
+                        while (!(reader.isEndElement() && reader.name() == QLatin1String("c"))) {
+                            reader.readNext();
                         }
                     } else {
                         while (!(reader.isEndElement() && reader.name() == QLatin1String("c"))) {
@@ -1050,6 +1097,29 @@ QString titleFromCoverTable(const TableMap &table)
         }
     }
     return lines.join(QLatin1Char('\n'));
+}
+
+QString normalizeHeaderCell(const QString &cell)
+{
+    QString s = cell.trimmed();
+    s.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+    while (s.contains(QStringLiteral("\n\n"))) {
+        s.replace(QStringLiteral("\n\n"), QStringLiteral("\n"));
+    }
+    return s;
+}
+
+bool isHeaderRowFirstColumn(const QString &col1, const QString &expectedFirst)
+{
+    const QString n = normalizeHeaderCell(col1);
+    const QString e = normalizeHeaderCell(expectedFirst);
+    if (n == e) {
+        return true;
+    }
+    if (n.contains(QStringLiteral("Msg Name")) && n.contains(QStringLiteral("报文名称"))) {
+        return true;
+    }
+    return false;
 }
 
 } // namespace
@@ -1112,35 +1182,60 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
         return false;
     }
 
+    QString sstError;
+    const QByteArray sstXml = readZipEntry(filePath, QStringLiteral("xl/sharedStrings.xml"), &sstError);
+    const QStringList sharedStrings = parseSharedStrings(sstXml);
+
     QString sheet2Error;
     const QByteArray sheet2Xml = readZipEntry(filePath, QStringLiteral("xl/worksheets/sheet2.xml"), &sheet2Error);
     const bool twoSheets = !sheet2Xml.isEmpty();
 
     TableMap table;
     if (twoSheets) {
-        result.documentTitle = titleFromCoverTable(parseWorksheetToTable(sheet1Xml));
-        table = parseWorksheetToTable(sheet2Xml);
+        result.documentTitle = titleFromCoverTable(parseWorksheetToTable(sheet1Xml, sharedStrings));
+        table = parseWorksheetToTable(sheet2Xml, sharedStrings);
     } else {
-        table = parseWorksheetToTable(sheet1Xml);
+        table = parseWorksheetToTable(sheet1Xml, sharedStrings);
     }
 
     const QStringList expectedHeaders = headerLabels();
     const int columnCount = expectedHeaders.size();
 
-    if (table.isEmpty()) {
+    auto findHeaderRow = [&expectedHeaders, columnCount](const TableMap &t) -> int {
+        const QString firstHeader = expectedHeaders.at(0);
+        for (auto it = t.begin(); it != t.end(); ++it) {
+            const QString col1 = it.value().value(1).trimmed();
+            if (isHeaderRowFirstColumn(col1, firstHeader)) {
+                return it.key();
+            }
+        }
+        return -1;
+    };
+
+    int headerRowIndex = findHeaderRow(table);
+    if (headerRowIndex < 0 && twoSheets && !sheet1Xml.isEmpty()) {
+        table = parseWorksheetToTable(sheet1Xml, sharedStrings);
+        result.documentTitle.clear();
+        headerRowIndex = findHeaderRow(table);
+    }
+
+    if (headerRowIndex < 0) {
         if (error) {
-            *error = "Excel sheet is empty";
+            const int firstRow = table.isEmpty() ? 0 : table.firstKey();
+            const QString col1 = table.isEmpty() ? QString() : table.value(firstRow).value(1).trimmed();
+            *error = QString("Unexpected header in column 1: %1").arg(col1.isEmpty() ? QStringLiteral("(empty)") : col1);
         }
         return false;
     }
 
-    // Validate headers in row 1
-    const QMap<int, QString> headerRow = table.value(1);
+    const QMap<int, QString> headerRow = table.value(headerRowIndex);
     for (int col = 1; col <= columnCount; ++col) {
-        const QString value = headerRow.value(col).trimmed();
-        if (value != expectedHeaders.at(col - 1)) {
+        const QString value = normalizeHeaderCell(headerRow.value(col));
+        const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
+        if (value != expected) {
             if (error) {
-                *error = QString("Unexpected header in column %1: %2").arg(col).arg(value);
+                const QString raw = headerRow.value(col).trimmed();
+                *error = QString("Unexpected header in column %1: %2").arg(col).arg(raw.isEmpty() ? QStringLiteral("(empty)") : raw);
             }
             return false;
         }
@@ -1150,7 +1245,7 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
     QStringList nodeAccumulator;
 
     for (auto it = table.begin(); it != table.end(); ++it) {
-        if (it.key() == 1) {
+        if (it.key() == headerRowIndex) {
             continue;
         }
         const QMap<int, QString> row = it.value();
