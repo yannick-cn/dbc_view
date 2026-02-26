@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "signallayoutwidget.h"
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -90,10 +91,12 @@ void MainWindow::setupUI()
     
     signalLayout->addWidget(m_signalTable);
     
-    // Details panel
+    // Details panel: stack Layout (when CAN ID selected) vs Properties+Value Table (when signal selected)
     m_detailsGroup = new QGroupBox("Signal Details", this);
     QVBoxLayout *detailsLayout = new QVBoxLayout(m_detailsGroup);
     
+    m_detailsStack = new QStackedWidget(this);
+    m_signalLayout = new SignalLayoutWidget(this);
     m_detailsTabs = new QTabWidget(this);
     
     m_signalDetails = new QTextEdit(this);
@@ -107,7 +110,9 @@ void MainWindow::setupUI()
     m_detailsTabs->addTab(m_signalDetails, "Properties");
     m_detailsTabs->addTab(m_valueTable, "Value Table");
     
-    detailsLayout->addWidget(m_detailsTabs);
+    m_detailsStack->addWidget(m_signalLayout);   // index 0: message bitfield layout
+    m_detailsStack->addWidget(m_detailsTabs);   // index 1: signal properties + value table
+    detailsLayout->addWidget(m_detailsStack);
     
     // Add to splitters
     m_rightSplitter->addWidget(m_signalGroup);
@@ -456,26 +461,35 @@ void MainWindow::onMessageSelectionChanged()
     
     if (selectedItems.isEmpty()) {
         m_currentMessage = nullptr;
+        m_currentSignal = nullptr;
         populateSignalTable(nullptr);
-        populateSignalDetails(nullptr);
+        m_signalLayout->setMessage(nullptr);
+        m_signalLayout->setHighlightedSignal(nullptr);
+        m_detailsStack->setCurrentIndex(0);
+        m_signalDetails->clear();
+        m_valueTable->clear();
         return;
     }
     
     QTreeWidgetItem *item = selectedItems.first();
     void *data = item->data(0, Qt::UserRole).value<void*>();
     
-    // Check if it's a message or signal
     if (item->parent() == nullptr) {
-        // It's a message
+        // CAN ID (message) selected -> show bitfield layout
         m_currentMessage = static_cast<CanMessage*>(data);
         m_currentSignal = nullptr;
         populateSignalTable(m_currentMessage);
-        populateSignalDetails(nullptr);
+        m_signalLayout->setMessage(m_currentMessage);
+        m_signalLayout->setHighlightedSignal(nullptr);
+        m_detailsStack->setCurrentIndex(0);
     } else {
-        // It's a signal
+        // Specific signal selected in tree -> show Properties + Value Table
         m_currentSignal = static_cast<CanSignal*>(data);
         m_currentMessage = static_cast<CanMessage*>(item->parent()->data(0, Qt::UserRole).value<void*>());
         populateSignalTable(m_currentMessage);
+        m_signalLayout->setMessage(m_currentMessage);
+        m_signalLayout->setHighlightedSignal(m_currentSignal);
+        m_detailsStack->setCurrentIndex(1);
         populateSignalDetails(m_currentSignal);
     }
 }
@@ -486,14 +500,19 @@ void MainWindow::onSignalSelectionChanged()
     
     if (selectedItems.isEmpty()) {
         m_currentSignal = nullptr;
-        populateSignalDetails(nullptr);
+        m_signalLayout->setHighlightedSignal(nullptr);
+        m_signalDetails->clear();
+        m_valueTable->clear();
+        m_detailsStack->setCurrentIndex(0);
         return;
     }
     
     QTableWidgetItem *item = selectedItems.first();
     void *data = item->data(Qt::UserRole).value<void*>();
     m_currentSignal = static_cast<CanSignal*>(data);
-    
+    m_signalLayout->setMessage(m_currentMessage);
+    m_signalLayout->setHighlightedSignal(m_currentSignal);
+    m_detailsStack->setCurrentIndex(1);
     populateSignalDetails(m_currentSignal);
 }
 
@@ -502,6 +521,9 @@ void MainWindow::clearViews()
     m_signalTable->setRowCount(0);
     m_signalDetails->clear();
     m_valueTable->clear();
+    m_signalLayout->setMessage(nullptr);
+    m_signalLayout->setHighlightedSignal(nullptr);
+    m_detailsStack->setCurrentIndex(0);
     m_currentMessage = nullptr;
     m_currentSignal = nullptr;
 }

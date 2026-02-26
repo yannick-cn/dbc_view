@@ -16,6 +16,7 @@ set(CMAKE_AUTOUIC ON)
 set(SOURCES
     src/main.cpp
     src/mainwindow.cpp
+    src/signallayoutwidget.cpp
     src/dbcparser.cpp
     src/canmessage.cpp
     src/cansignal.cpp
@@ -30,6 +31,7 @@ set(SOURCES
 # Header files
 set(HEADERS
     src/mainwindow.h
+    src/signallayoutwidget.h
     src/dbcparser.h
     src/cansignal.h
     src/canmessage.h

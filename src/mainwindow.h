@@ -15,12 +15,15 @@
 #include <QLabel>
 #include <QGroupBox>
 #include <QTabWidget>
+#include <QStackedWidget>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
 #include "dbcparser.h"
 #include "dbcexcelconverter.h"
 #include "dbcwriter.h"
+
+class SignalLayoutWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -66,6 +69,8 @@ private:
     QTableWidget *m_signalTable;
     
     QGroupBox *m_detailsGroup;
+    QStackedWidget *m_detailsStack;
+    SignalLayoutWidget *m_signalLayout;
     QTabWidget *m_detailsTabs;
     QTextEdit *m_signalDetails;
     QTextEdit *m_valueTable;
