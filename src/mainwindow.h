@@ -39,6 +39,7 @@ private slots:
     void exportToDbc();
     void onMessageSelectionChanged();
     void onSignalSelectionChanged();
+    void onSignalTableHeaderClicked(int logicalIndex);
     void showAbout();
 
 protected:
@@ -85,6 +86,8 @@ private:
     CanMessage *m_currentMessage;
     CanSignal *m_currentSignal;
     QString m_currentDbcPath;
+    int m_signalTableSortColumn = -1;
+    Qt::SortOrder m_signalTableSortOrder = Qt::AscendingOrder;
 };
 
 #endif // MAINWINDOW_H

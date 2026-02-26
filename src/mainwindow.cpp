@@ -11,6 +11,7 @@
 
 #include <QtGlobal>
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 
@@ -80,15 +81,16 @@ void MainWindow::setupUI()
     
     m_signalTable = new QTableWidget(this);
     m_signalTable->setColumnCount(8);
-    m_signalTable->setHorizontalHeaderLabels(QStringList() 
-        << "Name" << "Start Bit" << "Length" << "Factor" << "Offset" 
+    m_signalTable->setHorizontalHeaderLabels(QStringList()
+        << "Name" << "Start Bit" << "Length" << "Factor" << "Offset"
         << "Min" << "Max" << "Unit");
     m_signalTable->setAlternatingRowColors(true);
     m_signalTable->setSelectionBehavior(QAbstractItemView::SelectRows);
-    m_signalTable->setSortingEnabled(true);
     m_signalTable->horizontalHeader()->setStretchLastSection(true);
-    
+    m_signalTable->horizontalHeader()->setSectionsClickable(true);
+
     connect(m_signalTable, &QTableWidget::itemSelectionChanged, this, &MainWindow::onSignalSelectionChanged);
+    connect(m_signalTable->horizontalHeader(), &QHeaderView::sectionClicked, this, &MainWindow::onSignalTableHeaderClicked);
     
     signalLayout->addWidget(m_signalTable);
     
@@ -375,12 +377,74 @@ void MainWindow::populateSignalTable(CanMessage *message)
         m_signalTable->setItem(i, 5, new QTableWidgetItem(QString::number(signal->getMin())));
         m_signalTable->setItem(i, 6, new QTableWidgetItem(QString::number(signal->getMax())));
         m_signalTable->setItem(i, 7, new QTableWidgetItem(signal->getUnit()));
-        
-        // Store signal pointer in item data
-        m_signalTable->item(i, 0)->setData(Qt::UserRole, QVariant::fromValue(static_cast<void*>(signal)));
+
+        m_signalTable->item(i, 0)->setData(Qt::UserRole, QVariant::fromValue(static_cast<void *>(signal)));
+        m_signalTable->item(i, 1)->setData(Qt::UserRole, signal->getStartBit());
+        m_signalTable->item(i, 2)->setData(Qt::UserRole, signal->getLength());
+        m_signalTable->item(i, 3)->setData(Qt::UserRole, signal->getFactor());
+        m_signalTable->item(i, 4)->setData(Qt::UserRole, signal->getOffset());
+        m_signalTable->item(i, 5)->setData(Qt::UserRole, signal->getMin());
+        m_signalTable->item(i, 6)->setData(Qt::UserRole, signal->getMax());
     }
     
     m_signalTable->resizeColumnsToContents();
+}
+
+void MainWindow::onSignalTableHeaderClicked(int logicalIndex)
+{
+    if (logicalIndex < 0 || logicalIndex >= m_signalTable->columnCount()) {
+        return;
+    }
+    if (m_signalTable->rowCount() <= 1) {
+        return;
+    }
+    if (m_signalTableSortColumn == logicalIndex) {
+        m_signalTableSortOrder = (m_signalTableSortOrder == Qt::AscendingOrder) ? Qt::DescendingOrder : Qt::AscendingOrder;
+    } else {
+        m_signalTableSortColumn = logicalIndex;
+        m_signalTableSortOrder = Qt::AscendingOrder;
+    }
+
+    const int rowCount = m_signalTable->rowCount();
+    const int colCount = m_signalTable->columnCount();
+    QList<QList<QTableWidgetItem *>> rows;
+    for (int r = 0; r < rowCount; ++r) {
+        QList<QTableWidgetItem *> row;
+        for (int c = 0; c < colCount; ++c) {
+            row.append(m_signalTable->takeItem(r, c));
+        }
+        rows.append(row);
+    }
+
+    const bool numericColumn = (logicalIndex >= 1 && logicalIndex <= 6);
+    const bool ascending = (m_signalTableSortOrder == Qt::AscendingOrder);
+    if (numericColumn) {
+        std::sort(rows.begin(), rows.end(), [logicalIndex, ascending](const QList<QTableWidgetItem *> &a, const QList<QTableWidgetItem *> &b) {
+            const QVariant va = a[logicalIndex]->data(Qt::UserRole);
+            const QVariant vb = b[logicalIndex]->data(Qt::UserRole);
+            bool okA = false, okB = false;
+            const double na = va.toDouble(&okA);
+            const double nb = vb.toDouble(&okB);
+            if (okA && okB) {
+                return ascending ? (na < nb) : (na > nb);
+            }
+            const QString sa = a[logicalIndex]->text();
+            const QString sb = b[logicalIndex]->text();
+            return ascending ? (sa < sb) : (sa > sb);
+        });
+    } else {
+        std::sort(rows.begin(), rows.end(), [logicalIndex, ascending](const QList<QTableWidgetItem *> &a, const QList<QTableWidgetItem *> &b) {
+            const QString sa = a[logicalIndex]->text();
+            const QString sb = b[logicalIndex]->text();
+            return ascending ? (sa < sb) : (sa > sb);
+        });
+    }
+
+    for (int r = 0; r < rowCount; ++r) {
+        for (int c = 0; c < colCount; ++c) {
+            m_signalTable->setItem(r, c, rows[r][c]);
+        }
+    }
 }
 
 void MainWindow::populateSignalDetails(CanSignal *signal)
