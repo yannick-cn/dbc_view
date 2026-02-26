@@ -54,6 +54,7 @@ void DbcParser::clear()
     m_version.clear();
     m_busType.clear();
     m_documentTitle.clear();
+    m_changeHistory.clear();
     m_messageAttributeEnums.clear();
     m_signalAttributeEnums.clear();
 }
@@ -84,6 +85,7 @@ bool DbcParser::loadFromExcelImport(DbcExcelConverter::ImportResult &result)
     m_version = result.version;
     m_busType = result.busType;
     m_documentTitle = result.documentTitle;
+    m_changeHistory = result.changeHistory;
     m_nodes = result.nodes;
     m_messages = result.messages;
     result.messages.clear();
@@ -242,6 +244,36 @@ bool DbcParser::parseAttribute(const QString &line)
         value.replace(QLatin1String("\\n"), QLatin1String("\n"));
         value.replace(QLatin1String("\\\""), QLatin1String("\""));
         m_documentTitle = value;
+        return true;
+    }
+
+    QRegularExpression changeHistoryRegex = makeRegex("BA_\\s+\"ChangeHistory\"\\s+\"([^\"]*)\"");
+    const QRegularExpressionMatch changeHistoryMatch = changeHistoryRegex.match(line);
+    if (changeHistoryMatch.hasMatch()) {
+        QString value = changeHistoryMatch.captured(1);
+        value.replace(QLatin1String("\\\\"), QLatin1String("\\"));
+        value.replace(QLatin1String("\\n"), QLatin1String("\n"));
+        value.replace(QLatin1String("\\t"), QLatin1String("\t"));
+        value.replace(QLatin1String("\\\""), QLatin1String("\""));
+        const QStringList records = value.split(QLatin1Char('\n'), QString::SkipEmptyParts);
+        for (const QString &record : records) {
+            const QStringList fields = record.split(QLatin1Char('\t'));
+            if (fields.size() >= 6) {
+                const QString col1 = fields.at(0).trimmed();
+                const QString col2 = fields.at(1).trimmed();
+                if (col1 == QStringLiteral("序号") && col2 == QStringLiteral("协议版本")) {
+                    continue;
+                }
+                DbcExcelConverter::ChangeHistoryEntry e;
+                e.serialNumber = col1;
+                e.protocolVersion = col2;
+                e.changeContent = fields.at(2).trimmed();
+                e.changer = fields.at(3).trimmed();
+                e.changeDate = fields.at(4).trimmed();
+                e.reviewer = fields.at(5).trimmed();
+                m_changeHistory.append(e);
+            }
+        }
         return true;
     }
 

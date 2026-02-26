@@ -312,9 +312,9 @@ QByteArray generateStylesXml()
     return data;
 }
 
-QByteArray generateContentTypesXml(bool twoSheets)
+QByteArray generateContentTypesXml(int sheetCount)
 {
-    if (!twoSheets) {
+    if (sheetCount == 1) {
         static const char xml[] =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
             "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
@@ -328,7 +328,22 @@ QByteArray generateContentTypesXml(bool twoSheets)
             "</Types>";
         return QByteArray(xml);
     }
-    static const char xmlTwo[] =
+    if (sheetCount == 2) {
+        static const char xmlTwo[] =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
+            "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
+            "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
+            "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
+            "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+            "<Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+            "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
+            "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>"
+            "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>"
+            "</Types>";
+        return QByteArray(xmlTwo);
+    }
+    static const char xmlThree[] =
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
         "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
         "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
@@ -336,11 +351,12 @@ QByteArray generateContentTypesXml(bool twoSheets)
         "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
         "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
         "<Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
+        "<Override PartName=\"/xl/worksheets/sheet3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
         "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
         "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>"
         "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>"
         "</Types>";
-    return QByteArray(xmlTwo);
+    return QByteArray(xmlThree);
 }
 
 QByteArray generateRootRels()
@@ -355,9 +371,9 @@ QByteArray generateRootRels()
     return QByteArray(xml);
 }
 
-QByteArray generateWorkbookRels(bool twoSheets)
+QByteArray generateWorkbookRels(int sheetCount)
 {
-    if (!twoSheets) {
+    if (sheetCount == 1) {
         static const char xml[] =
             "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
             "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
@@ -366,17 +382,28 @@ QByteArray generateWorkbookRels(bool twoSheets)
             "</Relationships>";
         return QByteArray(xml);
     }
-    static const char xmlTwo[] =
+    if (sheetCount == 2) {
+        static const char xmlTwo[] =
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
+            "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
+            "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/>"
+            "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
+            "</Relationships>";
+        return QByteArray(xmlTwo);
+    }
+    static const char xmlThree[] =
         "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
         "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
         "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
         "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/>"
-        "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
+        "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet3.xml\"/>"
+        "<Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
         "</Relationships>";
-    return QByteArray(xmlTwo);
+    return QByteArray(xmlThree);
 }
 
-QByteArray generateWorkbookXml(bool twoSheets)
+QByteArray generateWorkbookXml(int sheetCount)
 {
     QByteArray data;
     QXmlStreamWriter writer(&data);
@@ -392,7 +419,23 @@ QByteArray generateWorkbookXml(bool twoSheets)
     writer.writeEndElement();
 
     writer.writeStartElement("sheets");
-    if (twoSheets) {
+    if (sheetCount == 3) {
+        writer.writeStartElement("sheet");
+        writer.writeAttribute("name", QStringLiteral("主页"));
+        writer.writeAttribute("sheetId", "1");
+        writer.writeAttribute("r:id", "rId1");
+        writer.writeEndElement();
+        writer.writeStartElement("sheet");
+        writer.writeAttribute("name", QStringLiteral("变更履历"));
+        writer.writeAttribute("sheetId", "2");
+        writer.writeAttribute("r:id", "rId2");
+        writer.writeEndElement();
+        writer.writeStartElement("sheet");
+        writer.writeAttribute("name", QStringLiteral("报文数据"));
+        writer.writeAttribute("sheetId", "3");
+        writer.writeAttribute("r:id", "rId3");
+        writer.writeEndElement();
+    } else if (sheetCount == 2) {
         writer.writeStartElement("sheet");
         writer.writeAttribute("name", QStringLiteral("主页"));
         writer.writeAttribute("sheetId", "1");
@@ -443,7 +486,7 @@ QByteArray generateCoreProps()
     return data;
 }
 
-QByteArray generateAppProps(bool twoSheets)
+QByteArray generateAppProps(int sheetCount)
 {
     QByteArray data;
     QXmlStreamWriter writer(&data);
@@ -460,17 +503,23 @@ QByteArray generateAppProps(bool twoSheets)
     writer.writeTextElement("vt:lpstr", "Worksheets");
     writer.writeEndElement();
     writer.writeStartElement("vt:variant");
-    writer.writeTextElement("vt:i4", twoSheets ? "2" : "1");
+    writer.writeTextElement("vt:i4", QString::number(sheetCount));
     writer.writeEndElement();
     writer.writeEndElement();
     writer.writeEndElement();
     writer.writeStartElement("TitlesOfParts");
     writer.writeStartElement("vt:vector");
-    writer.writeAttribute("size", twoSheets ? "2" : "1");
+    writer.writeAttribute("size", QString::number(sheetCount));
     writer.writeAttribute("baseType", "lpstr");
-    writer.writeTextElement("vt:lpstr", twoSheets ? QStringLiteral("主页") : QStringLiteral("Sheet1"));
-    if (twoSheets) {
+    if (sheetCount == 3) {
+        writer.writeTextElement("vt:lpstr", QStringLiteral("主页"));
+        writer.writeTextElement("vt:lpstr", QStringLiteral("变更履历"));
         writer.writeTextElement("vt:lpstr", QStringLiteral("报文数据"));
+    } else if (sheetCount == 2) {
+        writer.writeTextElement("vt:lpstr", QStringLiteral("主页"));
+        writer.writeTextElement("vt:lpstr", QStringLiteral("报文数据"));
+    } else {
+        writer.writeTextElement("vt:lpstr", QStringLiteral("Sheet1"));
     }
     writer.writeEndElement();
     writer.writeEndElement();
@@ -668,6 +717,92 @@ QByteArray generateCoverSheetXml(const QString &documentTitle)
     writer.writeAttribute("footer", "0.3");
     writer.writeEndElement();
 
+    writer.writeEndElement();
+    writer.writeEndDocument();
+    return data;
+}
+
+static const int kChangeHistoryColCount = 6;
+static const char *kChangeHistoryHeaders[] = {
+    "序号",
+    "协议版本",
+    "变更内容",
+    "变更人",
+    "变更日期",
+    "审核人"
+};
+
+QByteArray generateChangeHistorySheetXml(const QList<DbcExcelConverter::ChangeHistoryEntry> &changeHistory)
+{
+    const int totalRows = 1 + changeHistory.size();
+    QByteArray data;
+    QXmlStreamWriter writer(&data);
+    writer.writeStartDocument(QStringLiteral("1.0"), true);
+    writer.writeStartElement("worksheet");
+    writer.writeDefaultNamespace("http://schemas.openxmlformats.org/spreadsheetml/2006/main");
+    writer.writeNamespace("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "r");
+
+    writer.writeStartElement("dimension");
+    writer.writeAttribute("ref", QStringLiteral("A1:%1%2").arg(columnName(kChangeHistoryColCount)).arg(qMax(1, totalRows)));
+    writer.writeEndElement();
+
+    writer.writeStartElement("sheetViews");
+    writer.writeStartElement("sheetView");
+    writer.writeAttribute("workbookViewId", "0");
+    writer.writeAttribute("showGridLines", "1");
+    writer.writeEndElement();
+    writer.writeEndElement();
+
+    writer.writeStartElement("sheetFormatPr");
+    writer.writeAttribute("defaultRowHeight", "18");
+    writer.writeEndElement();
+
+    writer.writeStartElement("cols");
+    for (int col = 1; col <= kChangeHistoryColCount; ++col) {
+        writer.writeStartElement("col");
+        writer.writeAttribute("min", QString::number(col));
+        writer.writeAttribute("max", QString::number(col));
+        writer.writeAttribute("width", col == 3 ? "48" : "14");
+        writer.writeAttribute("customWidth", "1");
+        writer.writeEndElement();
+    }
+    writer.writeEndElement();
+
+    writer.writeStartElement("sheetData");
+    writer.writeStartElement("row");
+    writer.writeAttribute("r", "1");
+    writer.writeAttribute("ht", "24");
+    writer.writeAttribute("customHeight", "1");
+    for (int col = 1; col <= kChangeHistoryColCount; ++col) {
+        writeInlineStringCell(writer, 1, col, 1, QString::fromUtf8(kChangeHistoryHeaders[col - 1]));
+    }
+    writer.writeEndElement();
+
+    for (int i = 0; i < changeHistory.size(); ++i) {
+        const DbcExcelConverter::ChangeHistoryEntry &e = changeHistory.at(i);
+        const int row = 2 + i;
+        writer.writeStartElement("row");
+        writer.writeAttribute("r", QString::number(row));
+        writer.writeAttribute("ht", "24");
+        writer.writeAttribute("customHeight", "1");
+        writeInlineStringCell(writer, row, 1, 2, e.serialNumber);
+        writeInlineStringCell(writer, row, 2, 2, e.protocolVersion);
+        writeInlineStringCell(writer, row, 3, 2, e.changeContent);
+        writeInlineStringCell(writer, row, 4, 2, e.changer);
+        writeInlineStringCell(writer, row, 5, 2, e.changeDate);
+        writeInlineStringCell(writer, row, 6, 2, e.reviewer);
+        writer.writeEndElement();
+    }
+
+    writer.writeEndElement();
+    writer.writeStartElement("pageMargins");
+    writer.writeAttribute("left", "0.7");
+    writer.writeAttribute("right", "0.7");
+    writer.writeAttribute("top", "0.75");
+    writer.writeAttribute("bottom", "0.75");
+    writer.writeAttribute("header", "0.3");
+    writer.writeAttribute("footer", "0.3");
+    writer.writeEndElement();
     writer.writeEndElement();
     writer.writeEndDocument();
     return data;
@@ -1134,6 +1269,7 @@ bool isHeaderRowFirstColumn(const QString &col1, const QString &expectedFirst)
 
 void DbcExcelConverter::ImportResult::clear()
 {
+    changeHistory.clear();
     for (CanMessage *message : messages) {
         if (!message) {
             continue;
@@ -1152,6 +1288,7 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
                                       const QStringList &nodes,
                                       const QList<CanMessage*> &messages,
                                       const QString &documentTitle,
+                                      const QList<ChangeHistoryEntry> &changeHistory,
                                       QString *error)
 {
     Q_UNUSED(version);
@@ -1165,17 +1302,19 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
         ? kDefaultDocumentTitle
         : documentTitle;
 
+    const int sheetCount = 3;
     QList<QPair<QString, QByteArray>> entries;
-    entries.append({QStringLiteral("[Content_Types].xml"), generateContentTypesXml(true)});
+    entries.append({QStringLiteral("[Content_Types].xml"), generateContentTypesXml(sheetCount)});
     entries.append({QStringLiteral("_rels/.rels"), generateRootRels()});
-    entries.append({QStringLiteral("xl/_rels/workbook.xml.rels"), generateWorkbookRels(true)});
-    entries.append({QStringLiteral("xl/workbook.xml"), generateWorkbookXml(true)});
+    entries.append({QStringLiteral("xl/_rels/workbook.xml.rels"), generateWorkbookRels(sheetCount)});
+    entries.append({QStringLiteral("xl/workbook.xml"), generateWorkbookXml(sheetCount)});
     entries.append({QStringLiteral("xl/styles.xml"), generateStylesXml()});
     entries.append({QStringLiteral("docProps/core.xml"), generateCoreProps()});
-    entries.append({QStringLiteral("docProps/app.xml"), generateAppProps(true)});
+    entries.append({QStringLiteral("docProps/app.xml"), generateAppProps(sheetCount)});
 
     entries.append({QStringLiteral("xl/worksheets/sheet1.xml"), generateCoverSheetXml(coverTitle)});
-    entries.append({QStringLiteral("xl/worksheets/sheet2.xml"), generateWorksheetXml(messages)});
+    entries.append({QStringLiteral("xl/worksheets/sheet2.xml"), generateChangeHistorySheetXml(changeHistory)});
+    entries.append({QStringLiteral("xl/worksheets/sheet3.xml"), generateWorksheetXml(messages)});
 
     return writeZipArchive(filePath, entries, error);
 }
@@ -1196,10 +1335,35 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
 
     QString sheet2Error;
     const QByteArray sheet2Xml = readZipEntry(filePath, QStringLiteral("xl/worksheets/sheet2.xml"), &sheet2Error);
-    const bool twoSheets = !sheet2Xml.isEmpty();
+    QString sheet3Error;
+    const QByteArray sheet3Xml = readZipEntry(filePath, QStringLiteral("xl/worksheets/sheet3.xml"), &sheet3Error);
+    const bool hasSheet2 = !sheet2Xml.isEmpty();
+    const bool hasSheet3 = !sheet3Xml.isEmpty();
 
     TableMap table;
-    if (twoSheets) {
+    if (hasSheet3) {
+        result.documentTitle = titleFromCoverTable(parseWorksheetToTable(sheet1Xml, sharedStrings));
+        TableMap changeTable = parseWorksheetToTable(sheet2Xml, sharedStrings);
+        for (auto it = changeTable.begin(); it != changeTable.end(); ++it) {
+            if (it.key() == 1) {
+                continue;
+            }
+            const QMap<int, QString> row = it.value();
+            const QString col1 = row.value(1).trimmed();
+            if (col1.isEmpty() && row.value(2).trimmed().isEmpty()) {
+                continue;
+            }
+            ChangeHistoryEntry e;
+            e.serialNumber = col1;
+            e.protocolVersion = row.value(2).trimmed();
+            e.changeContent = row.value(3).trimmed();
+            e.changer = row.value(4).trimmed();
+            e.changeDate = row.value(5).trimmed();
+            e.reviewer = row.value(6).trimmed();
+            result.changeHistory.append(e);
+        }
+        table = parseWorksheetToTable(sheet3Xml, sharedStrings);
+    } else if (hasSheet2) {
         result.documentTitle = titleFromCoverTable(parseWorksheetToTable(sheet1Xml, sharedStrings));
         table = parseWorksheetToTable(sheet2Xml, sharedStrings);
     } else {
@@ -1221,7 +1385,7 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
     };
 
     int headerRowIndex = findHeaderRow(table);
-    if (headerRowIndex < 0 && twoSheets && !sheet1Xml.isEmpty()) {
+    if (headerRowIndex < 0 && hasSheet2 && !hasSheet3 && !sheet1Xml.isEmpty()) {
         table = parseWorksheetToTable(sheet1Xml, sharedStrings);
         result.documentTitle.clear();
         headerRowIndex = findHeaderRow(table);

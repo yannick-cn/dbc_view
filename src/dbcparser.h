@@ -21,6 +21,7 @@ public:
     QString getVersion() const { return m_version; }
     QString getBusType() const { return m_busType; }
     QString getDocumentTitle() const { return m_documentTitle; }
+    QList<DbcExcelConverter::ChangeHistoryEntry> getChangeHistory() const { return m_changeHistory; }
     QStringList getNodes() const { return m_nodes; }
     
     void clear();
@@ -29,6 +30,7 @@ private:
     QString m_version;
     QString m_busType;
     QString m_documentTitle;
+    QList<DbcExcelConverter::ChangeHistoryEntry> m_changeHistory;
     QStringList m_nodes;
     QList<CanMessage*> m_messages;
     QMap<int, CanMessage*> m_messageMap;

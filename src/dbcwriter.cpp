@@ -165,6 +165,7 @@ bool DbcWriter::write(const QString &filePath,
                       const QList<CanMessage*> &messages,
                       const QString &dbComment,
                       const QString &documentTitle,
+                      const QList<DbcExcelConverter::ChangeHistoryEntry> &changeHistory,
                       QString *error)
 {
     QFile file(filePath);
@@ -327,6 +328,7 @@ bool DbcWriter::write(const QString &filePath,
     out << "BA_DEF_ \"Manufacturer\" STRING ;\n";
     out << "BA_DEF_ \"DBName\" STRING ;\n";
     out << "BA_DEF_ \"DocumentTitle\" STRING ;\n";
+    out << "BA_DEF_ \"ChangeHistory\" STRING ;\n";
     out << "BA_DEF_ \"Baudrate\" INT 0 1000000;\n";
     out << "BA_DEF_ \"NmType\" STRING ;\n";
     out << "BA_DEF_ \"VersionYear\" INT 2010 2999;\n";
@@ -352,6 +354,7 @@ bool DbcWriter::write(const QString &filePath,
     out << "BA_DEF_DEF_ \"Manufacturer\" \"\";\n";
     out << "BA_DEF_DEF_ \"DBName\" \"\";\n";
     out << "BA_DEF_DEF_ \"DocumentTitle\" \"\";\n";
+    out << "BA_DEF_DEF_ \"ChangeHistory\" \"\";\n";
     out << "BA_DEF_DEF_ \"Baudrate\" 500000;\n";
     out << "BA_DEF_DEF_ \"NmType\" \"OSEK\";\n";
     out << "BA_DEF_DEF_ \"VersionYear\" 2019;\n";
@@ -363,6 +366,20 @@ bool DbcWriter::write(const QString &filePath,
         QString title = documentTitle;
         title.replace(QLatin1Char('\n'), QLatin1String("\\n"));
         out << "BA_ \"DocumentTitle\" \"" << escape(title) << "\";\n";
+    }
+    if (!changeHistory.isEmpty()) {
+        QStringList records;
+        for (const DbcExcelConverter::ChangeHistoryEntry &e : changeHistory) {
+            QString content = e.changeContent;
+            content.replace(QLatin1Char('\\'), QLatin1String("\\\\"));
+            content.replace(QLatin1Char('\t'), QLatin1String("\\t"));
+            content.replace(QLatin1Char('\n'), QLatin1String("\\n"));
+            records.append(e.serialNumber + QLatin1Char('\t') + e.protocolVersion + QLatin1Char('\t')
+                + content + QLatin1Char('\t') + e.changer + QLatin1Char('\t') + e.changeDate + QLatin1Char('\t') + e.reviewer);
+        }
+        QString encoded = records.join(QLatin1Char('\n'));
+        encoded.replace(QLatin1Char('\n'), QLatin1String("\\n"));
+        out << "BA_ \"ChangeHistory\" \"" << escape(encoded) << "\";\n";
     }
     out << "BA_ \"ProtocolType\" \"CAN FD\";\n";
     out << "BA_ \"Manufacturer\" \"JX\";\n";

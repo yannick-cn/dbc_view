@@ -10,11 +10,22 @@
 class DbcExcelConverter
 {
 public:
+    struct ChangeHistoryEntry
+    {
+        QString serialNumber;
+        QString protocolVersion;
+        QString changeContent;
+        QString changer;
+        QString changeDate;
+        QString reviewer;
+    };
+
     struct ImportResult
     {
         QString version;
         QString busType;
         QString documentTitle;
+        QList<ChangeHistoryEntry> changeHistory;
         QStringList nodes;
         QList<CanMessage*> messages;
 
@@ -27,6 +38,7 @@ public:
                               const QStringList &nodes,
                               const QList<CanMessage*> &messages,
                               const QString &documentTitle = QString(),
+                              const QList<ChangeHistoryEntry> &changeHistory = QList<ChangeHistoryEntry>(),
                               QString *error = nullptr);
 
     static bool importFromExcel(const QString &filePath,

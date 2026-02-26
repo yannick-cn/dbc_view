@@ -242,6 +242,7 @@ void MainWindow::exportToExcel()
                                           m_dbcParser->getNodes(),
                                           m_dbcParser->getMessages(),
                                           m_dbcParser->getDocumentTitle(),
+                                          m_dbcParser->getChangeHistory(),
                                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
         return;
@@ -285,6 +286,7 @@ void MainWindow::exportToDbc()
                           m_dbcParser->getMessages(),
                           QString(),
                           m_dbcParser->getDocumentTitle(),
+                          m_dbcParser->getChangeHistory(),
                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
         return;
