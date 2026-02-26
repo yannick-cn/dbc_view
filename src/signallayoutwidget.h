@@ -30,6 +30,7 @@ protected:
 
 private:
     void buildLayout();
+    void showSignalDetailDialog(CanSignal *signal);
     /** Returns global bit index for cell (row, col). row=byte, col=0..7, bit 0 = MSB of byte. */
     static int cellToBit(int row, int col);
     static void bitToCell(int bit, int *row, int *col);

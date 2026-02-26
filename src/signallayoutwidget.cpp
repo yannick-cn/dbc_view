@@ -9,6 +9,15 @@
 #include <QEvent>
 #include <QApplication>
 #include <QCursor>
+#include <QDialog>
+#include <QTabWidget>
+#include <QTextEdit>
+#include <QDialogButtonBox>
+#include <QPushButton>
+#include <QFont>
+#include <QtGlobal>
+#include <cmath>
+#include <limits>
 
 namespace {
 
@@ -31,6 +40,8 @@ const QList<QColor> kDefaultColors = {
     QColor(0xFF, 0x70, 0x43),  // deep orange
     QColor(0xBC, 0xAA, 0xA4),  // brown
 };
+
+const int kSignalIndexRole = Qt::UserRole + 1;
 
 } // namespace
 
@@ -72,6 +83,7 @@ bool SignalLayoutWidget::eventFilter(QObject *watched, QEvent *event)
     if (watched != m_table->viewport()) {
         return QWidget::eventFilter(watched, event);
     }
+    QMouseEvent *mouseEvent = nullptr;
     if (event->type() == QEvent::MouseMove) {
         QPoint pos = static_cast<QMouseEvent *>(event)->pos();
         QTableWidgetItem *item = m_table->itemAt(pos);
@@ -86,6 +98,39 @@ bool SignalLayoutWidget::eventFilter(QObject *watched, QEvent *event)
     } else if (event->type() == QEvent::Leave) {
         QToolTip::hideText();
         QToolTip::showText(QPoint(-10000, -10000), QString(), m_table);
+    } else if (event->type() == QEvent::MouseButtonPress) {
+        mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            QPoint pos = mouseEvent->pos();
+            QTableWidgetItem *item = m_table->itemAt(pos);
+            QString tip = item ? item->data(Qt::UserRole).toString() : QString();
+            if (!tip.isEmpty()) {
+                QPoint globalPos = m_table->viewport()->mapToGlobal(pos);
+                QToolTip::showText(globalPos + QPoint(12, 20), tip, m_table);
+            }
+        }
+    } else if (event->type() == QEvent::MouseButtonRelease) {
+        mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton) {
+            QPoint pos = mouseEvent->pos();
+            QTableWidgetItem *item = m_table->itemAt(pos);
+            QString tip = item ? item->data(Qt::UserRole).toString() : QString();
+            if (!tip.isEmpty()) {
+                QPoint globalPos = m_table->viewport()->mapToGlobal(pos);
+                QToolTip::showText(globalPos + QPoint(12, 20), tip, m_table);
+            }
+        }
+    } else if (event->type() == QEvent::MouseButtonDblClick) {
+        mouseEvent = static_cast<QMouseEvent *>(event);
+        if (mouseEvent->button() == Qt::LeftButton && m_message) {
+            QPoint pos = mouseEvent->pos();
+            QTableWidgetItem *item = m_table->itemAt(pos);
+            const int sigIndex = item ? item->data(kSignalIndexRole).toInt() : -1;
+            if (sigIndex >= 0 && sigIndex < m_message->getSignals().size()) {
+                CanSignal *signal = m_message->getSignals().at(sigIndex);
+                showSignalDetailDialog(signal);
+            }
+        }
     }
     return QWidget::eventFilter(watched, event);
 }
@@ -108,6 +153,92 @@ void SignalLayoutWidget::setHighlightedSignal(CanSignal *signal)
 {
     m_highlightedSignal = signal;
     buildLayout();
+}
+
+void SignalLayoutWidget::showSignalDetailDialog(CanSignal *signal)
+{
+    if (!signal) {
+        return;
+    }
+    auto maskForLength = [](int length) -> quint64 {
+        if (length <= 0) return 0;
+        if (length >= 64) return std::numeric_limits<quint64>::max();
+        return (quint64(1) << length) - 1;
+    };
+    const quint64 initialValue = static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength());
+    const QString byteOrderText = signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB";
+    const QString receivers = signal->getReceiversAsString().isEmpty() ? "N/A" : signal->getReceiversAsString();
+    const QString sendType = signal->getSendType().isEmpty() ? "N/A" : signal->getSendType();
+    const QString invalidValue = signal->getInvalidValueHex().isEmpty() ? "-" : signal->getInvalidValueHex();
+    const QString inactiveValue = signal->getInactiveValueHex().isEmpty() ? "-" : signal->getInactiveValueHex();
+
+    const QString details = QString(
+        "Name: %1\n"
+        "Start Bit: %2\n"
+        "Length: %3 bits\n"
+        "Byte Order: %4\n"
+        "Signed: %5\n"
+        "Send Type: %6\n"
+        "Factor: %7\n"
+        "Offset: %8\n"
+        "Min Value: %9\n"
+        "Max Value: %10\n"
+        "Unit: %11\n"
+        "Receivers: %12\n"
+        "Initial Value (Hex): %13\n"
+        "Invalid Value (Hex): %14\n"
+        "Inactive Value (Hex): %15\n"
+        "\nPhysical Value Calculation:\n"
+        "Physical = Raw × %7 + %8\n"
+        "Raw = (Physical - %8) ÷ %7"
+    ).arg(signal->getName())
+     .arg(signal->getStartBit())
+     .arg(signal->getLength())
+     .arg(byteOrderText)
+     .arg(signal->isSigned() ? "Yes" : "No")
+     .arg(sendType)
+     .arg(signal->getFactor())
+     .arg(signal->getOffset())
+     .arg(signal->getMin())
+     .arg(signal->getMax())
+     .arg(signal->getUnit())
+     .arg(receivers)
+     .arg(QString("0x%1").arg(initialValue, 0, 16).toUpper())
+     .arg(invalidValue)
+     .arg(inactiveValue);
+
+    QString valueTableText;
+    const QMap<int, QString> valueTable = signal->getValueTable();
+    if (valueTable.isEmpty()) {
+        valueTableText = "No value table defined for this signal.";
+    } else {
+        valueTableText = "Value Table:\n\n";
+        for (auto it = valueTable.begin(); it != valueTable.end(); ++it) {
+            valueTableText += QString("%1: %2\n").arg(it.key()).arg(it.value());
+        }
+    }
+
+    QDialog *dialog = new QDialog(this);
+    dialog->setWindowTitle(QString("Signal: %1").arg(signal->getName()));
+    dialog->setMinimumSize(480, 400);
+    QVBoxLayout *layout = new QVBoxLayout(dialog);
+    QTabWidget *tabs = new QTabWidget(dialog);
+    QTextEdit *propsEdit = new QTextEdit(dialog);
+    propsEdit->setReadOnly(true);
+    propsEdit->setFont(QFont("Courier", 10));
+    propsEdit->setPlainText(details);
+    QTextEdit *valueEdit = new QTextEdit(dialog);
+    valueEdit->setReadOnly(true);
+    valueEdit->setFont(QFont("Courier", 10));
+    valueEdit->setPlainText(valueTableText);
+    tabs->addTab(propsEdit, "Properties");
+    tabs->addTab(valueEdit, "Value Table");
+    layout->addWidget(tabs);
+    QDialogButtonBox *box = new QDialogButtonBox(QDialogButtonBox::Close, Qt::Horizontal, dialog);
+    connect(box, &QDialogButtonBox::rejected, dialog, &QDialog::reject);
+    layout->addWidget(box);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
 }
 
 void SignalLayoutWidget::buildLayout()
@@ -200,6 +331,7 @@ void SignalLayoutWidget::buildLayout()
             item->setTextAlignment(Qt::AlignCenter);
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
             item->setData(Qt::UserRole, tooltip);
+            item->setData(kSignalIndexRole, sigIndex);
             item->setToolTip(QString());
             m_table->setItem(row, col, item);
 
