@@ -314,49 +314,22 @@ QByteArray generateStylesXml()
 
 QByteArray generateContentTypesXml(int sheetCount)
 {
-    if (sheetCount == 1) {
-        static const char xml[] =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-            "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
-            "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
-            "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
-            "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
-            "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
-            "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
-            "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>"
-            "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>"
-            "</Types>";
-        return QByteArray(xml);
-    }
-    if (sheetCount == 2) {
-        static const char xmlTwo[] =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-            "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
-            "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
-            "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
-            "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
-            "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
-            "<Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
-            "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
-            "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>"
-            "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>"
-            "</Types>";
-        return QByteArray(xmlTwo);
-    }
-    static const char xmlThree[] =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+    QByteArray data;
+    data.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
         "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">"
         "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>"
         "<Default Extension=\"xml\" ContentType=\"application/xml\"/>"
-        "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>"
-        "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
-        "<Override PartName=\"/xl/worksheets/sheet2.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
-        "<Override PartName=\"/xl/worksheets/sheet3.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>"
-        "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
+        "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>");
+    for (int i = 1; i <= sheetCount; ++i) {
+        data.append("<Override PartName=\"/xl/worksheets/sheet");
+        data.append(QString::number(i).toUtf8());
+        data.append(".xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>");
+    }
+    data.append("<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>"
         "<Override PartName=\"/docProps/core.xml\" ContentType=\"application/vnd.openxmlformats-package.core-properties+xml\"/>"
         "<Override PartName=\"/docProps/app.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.extended-properties+xml\"/>"
-        "</Types>";
-    return QByteArray(xmlThree);
+        "</Types>");
+    return data;
 }
 
 QByteArray generateRootRels()
@@ -373,37 +346,25 @@ QByteArray generateRootRels()
 
 QByteArray generateWorkbookRels(int sheetCount)
 {
-    if (sheetCount == 1) {
-        static const char xml[] =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
-            "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
-            "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
-            "</Relationships>";
-        return QByteArray(xml);
+    QByteArray data;
+    data.append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
+        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">");
+    for (int i = 1; i <= sheetCount; ++i) {
+        data.append("<Relationship Id=\"rId");
+        data.append(QString::number(i).toUtf8());
+        data.append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet");
+        data.append(QString::number(i).toUtf8());
+        data.append(".xml\"/>");
     }
-    if (sheetCount == 2) {
-        static const char xmlTwo[] =
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-            "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
-            "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
-            "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/>"
-            "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
-            "</Relationships>";
-        return QByteArray(xmlTwo);
-    }
-    static const char xmlThree[] =
-        "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>"
-        "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">"
-        "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>"
-        "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet2.xml\"/>"
-        "<Relationship Id=\"rId3\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet3.xml\"/>"
-        "<Relationship Id=\"rId4\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
-        "</Relationships>";
-    return QByteArray(xmlThree);
+    data.append("<Relationship Id=\"rId");
+    data.append(QString::number(sheetCount + 1).toUtf8());
+    data.append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>"
+        "</Relationships>");
+    return data;
 }
 
-QByteArray generateWorkbookXml(int sheetCount)
+// dataSheetNames: one name per data sheet (sheet 3, 4, ...). Size must be sheetCount - 2.
+QByteArray generateWorkbookXml(int sheetCount, const QStringList &dataSheetNames)
 {
     QByteArray data;
     QXmlStreamWriter writer(&data);
@@ -419,38 +380,24 @@ QByteArray generateWorkbookXml(int sheetCount)
     writer.writeEndElement();
 
     writer.writeStartElement("sheets");
-    if (sheetCount == 3) {
+    writer.writeStartElement("sheet");
+    writer.writeAttribute("name", QStringLiteral("主页"));
+    writer.writeAttribute("sheetId", "1");
+    writer.writeAttribute("r:id", "rId1");
+    writer.writeEndElement();
+    writer.writeStartElement("sheet");
+    writer.writeAttribute("name", QStringLiteral("变更履历"));
+    writer.writeAttribute("sheetId", "2");
+    writer.writeAttribute("r:id", "rId2");
+    writer.writeEndElement();
+    for (int i = 0; i < sheetCount - 2; ++i) {
+        const QString name = i < dataSheetNames.size()
+            ? dataSheetNames.at(i)
+            : (QStringLiteral("报文数据") + QString::number(i + 1));
         writer.writeStartElement("sheet");
-        writer.writeAttribute("name", QStringLiteral("主页"));
-        writer.writeAttribute("sheetId", "1");
-        writer.writeAttribute("r:id", "rId1");
-        writer.writeEndElement();
-        writer.writeStartElement("sheet");
-        writer.writeAttribute("name", QStringLiteral("变更履历"));
-        writer.writeAttribute("sheetId", "2");
-        writer.writeAttribute("r:id", "rId2");
-        writer.writeEndElement();
-        writer.writeStartElement("sheet");
-        writer.writeAttribute("name", QStringLiteral("报文数据"));
-        writer.writeAttribute("sheetId", "3");
-        writer.writeAttribute("r:id", "rId3");
-        writer.writeEndElement();
-    } else if (sheetCount == 2) {
-        writer.writeStartElement("sheet");
-        writer.writeAttribute("name", QStringLiteral("主页"));
-        writer.writeAttribute("sheetId", "1");
-        writer.writeAttribute("r:id", "rId1");
-        writer.writeEndElement();
-        writer.writeStartElement("sheet");
-        writer.writeAttribute("name", QStringLiteral("报文数据"));
-        writer.writeAttribute("sheetId", "2");
-        writer.writeAttribute("r:id", "rId2");
-        writer.writeEndElement();
-    } else {
-        writer.writeStartElement("sheet");
-        writer.writeAttribute("name", "Sheet1");
-        writer.writeAttribute("sheetId", "1");
-        writer.writeAttribute("r:id", "rId1");
+        writer.writeAttribute("name", name);
+        writer.writeAttribute("sheetId", QString::number(i + 3));
+        writer.writeAttribute("r:id", QStringLiteral("rId%1").arg(i + 3));
         writer.writeEndElement();
     }
     writer.writeEndElement();
@@ -486,7 +433,7 @@ QByteArray generateCoreProps()
     return data;
 }
 
-QByteArray generateAppProps(int sheetCount)
+QByteArray generateAppProps(int sheetCount, const QStringList &dataSheetNames)
 {
     QByteArray data;
     QXmlStreamWriter writer(&data);
@@ -511,15 +458,12 @@ QByteArray generateAppProps(int sheetCount)
     writer.writeStartElement("vt:vector");
     writer.writeAttribute("size", QString::number(sheetCount));
     writer.writeAttribute("baseType", "lpstr");
-    if (sheetCount == 3) {
-        writer.writeTextElement("vt:lpstr", QStringLiteral("主页"));
-        writer.writeTextElement("vt:lpstr", QStringLiteral("变更履历"));
-        writer.writeTextElement("vt:lpstr", QStringLiteral("报文数据"));
-    } else if (sheetCount == 2) {
-        writer.writeTextElement("vt:lpstr", QStringLiteral("主页"));
-        writer.writeTextElement("vt:lpstr", QStringLiteral("报文数据"));
-    } else {
-        writer.writeTextElement("vt:lpstr", QStringLiteral("Sheet1"));
+    writer.writeTextElement("vt:lpstr", QStringLiteral("主页"));
+    writer.writeTextElement("vt:lpstr", QStringLiteral("变更履历"));
+    for (int i = 2; i < sheetCount; ++i) {
+        writer.writeTextElement("vt:lpstr", i - 2 < dataSheetNames.size()
+            ? dataSheetNames.at(i - 2)
+            : (QStringLiteral("报文数据") + QString::number(i - 1)));
     }
     writer.writeEndElement();
     writer.writeEndElement();
@@ -806,6 +750,48 @@ QByteArray generateChangeHistorySheetXml(const QList<DbcExcelConverter::ChangeHi
     writer.writeEndElement();
     writer.writeEndDocument();
     return data;
+}
+
+// Returns messages that belong to the given node: transmitted by node or any signal received by node.
+static QList<CanMessage*> messagesForNode(const QList<CanMessage*> &messages, const QString &node)
+{
+    if (node.isEmpty()) {
+        return messages;
+    }
+    QList<CanMessage*> out;
+    for (CanMessage *msg : messages) {
+        if (!msg) {
+            continue;
+        }
+        if (msg->getTransmitter() == node) {
+            out.append(msg);
+            continue;
+        }
+        for (const CanSignal *sig : msg->getSignals()) {
+            if (sig && sig->getReceivers().contains(node)) {
+                out.append(msg);
+                break;
+            }
+        }
+    }
+    return out;
+}
+
+// Excel sheet names: max 31 chars, cannot contain \ / ? * [ ]
+static QString sanitizeSheetName(const QString &name)
+{
+    QString s = name.trimmed();
+    const QChar bad[] = { QLatin1Char('\\'), QLatin1Char('/'), QLatin1Char('?'), QLatin1Char('*'), QLatin1Char('['), QLatin1Char(']') };
+    for (const QChar c : bad) {
+        s.replace(c, QLatin1Char('_'));
+    }
+    if (s.length() > 31) {
+        s = s.left(31);
+    }
+    if (s.isEmpty()) {
+        s = QStringLiteral("Sheet");
+    }
+    return s;
 }
 
 QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QString &busType)
@@ -1163,6 +1149,24 @@ quint64 parseHexToUInt64(const QString &text, bool *ok)
 
 using TableMap = QMap<int, QMap<int, QString>>;
 
+// Returns number of worksheet parts (sheet1, sheet2, ...) by reading workbook.xml.
+static int getWorkbookSheetCount(const QString &filePath, QString *error)
+{
+    const QByteArray wbXml = readZipEntry(filePath, QStringLiteral("xl/workbook.xml"), error);
+    if (wbXml.isEmpty()) {
+        return 0;
+    }
+    int count = 0;
+    QXmlStreamReader reader(wbXml);
+    while (!reader.atEnd()) {
+        reader.readNext();
+        if (reader.isStartElement() && reader.name() == QLatin1String("sheet")) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 TableMap parseWorksheetToTable(const QByteArray &sheetXml, const QStringList &sharedStrings)
 {
     TableMap table;
@@ -1305,7 +1309,6 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
                                       QString *error)
 {
     Q_UNUSED(version);
-    Q_UNUSED(nodes);
 
     static const QString kDefaultDocumentTitle = QStringLiteral(
         "4D毫米波成像雷达GPAL Ares-F(C)R6C\n"
@@ -1314,19 +1317,36 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
         ? kDefaultDocumentTitle
         : documentTitle;
 
-    const int sheetCount = 3;
+    // One data sheet per BU_ node; if no nodes, one sheet "报文数据"
+    const int dataSheetCount = nodes.isEmpty() ? 1 : nodes.size();
+    const int sheetCount = 2 + dataSheetCount; // 主页 + 变更履历 + data sheets
+    QStringList dataSheetNames;
+    if (nodes.isEmpty()) {
+        dataSheetNames.append(QStringLiteral("报文数据"));
+    } else {
+        for (const QString &node : nodes) {
+            dataSheetNames.append(sanitizeSheetName(node));
+        }
+    }
+
     QList<QPair<QString, QByteArray>> entries;
     entries.append({QStringLiteral("[Content_Types].xml"), generateContentTypesXml(sheetCount)});
     entries.append({QStringLiteral("_rels/.rels"), generateRootRels()});
     entries.append({QStringLiteral("xl/_rels/workbook.xml.rels"), generateWorkbookRels(sheetCount)});
-    entries.append({QStringLiteral("xl/workbook.xml"), generateWorkbookXml(sheetCount)});
+    entries.append({QStringLiteral("xl/workbook.xml"), generateWorkbookXml(sheetCount, dataSheetNames)});
     entries.append({QStringLiteral("xl/styles.xml"), generateStylesXml()});
     entries.append({QStringLiteral("docProps/core.xml"), generateCoreProps()});
-    entries.append({QStringLiteral("docProps/app.xml"), generateAppProps(sheetCount)});
+    entries.append({QStringLiteral("docProps/app.xml"), generateAppProps(sheetCount, dataSheetNames)});
 
     entries.append({QStringLiteral("xl/worksheets/sheet1.xml"), generateCoverSheetXml(coverTitle)});
     entries.append({QStringLiteral("xl/worksheets/sheet2.xml"), generateChangeHistorySheetXml(changeHistory)});
-    entries.append({QStringLiteral("xl/worksheets/sheet3.xml"), generateWorksheetXml(messages, busType)});
+    for (int i = 0; i < dataSheetCount; ++i) {
+        QList<CanMessage*> perNodeMessages = nodes.isEmpty()
+            ? messages
+            : messagesForNode(messages, nodes.at(i));
+        const QString path = QStringLiteral("xl/worksheets/sheet%1.xml").arg(i + 3);
+        entries.append({path, generateWorksheetXml(perNodeMessages, busType)});
+    }
 
     return writeZipArchive(filePath, entries, error);
 }
@@ -1347,14 +1367,32 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
 
     QString sheet2Error;
     const QByteArray sheet2Xml = readZipEntry(filePath, QStringLiteral("xl/worksheets/sheet2.xml"), &sheet2Error);
-    QString sheet3Error;
-    const QByteArray sheet3Xml = readZipEntry(filePath, QStringLiteral("xl/worksheets/sheet3.xml"), &sheet3Error);
     const bool hasSheet2 = !sheet2Xml.isEmpty();
-    const bool hasSheet3 = !sheet3Xml.isEmpty();
 
-    TableMap table;
-    if (hasSheet3) {
+    int workbookSheetCount = getWorkbookSheetCount(filePath, error);
+    if (workbookSheetCount <= 0) {
+        workbookSheetCount = hasSheet2 ? 2 : 1;
+    }
+    // Data sheets: if 2 sheets total then sheet2 is data; if 3+ then sheet3, sheet4, ...
+    QList<QByteArray> dataSheetXmls;
+    if (workbookSheetCount == 2) {
+        if (!sheet2Xml.isEmpty()) {
+            dataSheetXmls.append(sheet2Xml);
+        }
+    } else {
+        for (int idx = 3; idx <= workbookSheetCount; ++idx) {
+            QString err;
+            const QByteArray dataXml = readZipEntry(filePath, QStringLiteral("xl/worksheets/sheet%1.xml").arg(idx), &err);
+            if (!dataXml.isEmpty()) {
+                dataSheetXmls.append(dataXml);
+            }
+        }
+    }
+
+    if (hasSheet2) {
         result.documentTitle = titleFromCoverTable(parseWorksheetToTable(sheet1Xml, sharedStrings));
+    }
+    if (hasSheet2 && workbookSheetCount >= 3) {
         TableMap changeTable = parseWorksheetToTable(sheet2Xml, sharedStrings);
         for (auto it = changeTable.begin(); it != changeTable.end(); ++it) {
             if (it.key() == 1) {
@@ -1374,12 +1412,6 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
             e.reviewer = row.value(6).trimmed();
             result.changeHistory.append(e);
         }
-        table = parseWorksheetToTable(sheet3Xml, sharedStrings);
-    } else if (hasSheet2) {
-        result.documentTitle = titleFromCoverTable(parseWorksheetToTable(sheet1Xml, sharedStrings));
-        table = parseWorksheetToTable(sheet2Xml, sharedStrings);
-    } else {
-        table = parseWorksheetToTable(sheet1Xml, sharedStrings);
     }
 
     const QStringList expectedHeaders = headerLabels();
@@ -1396,131 +1428,254 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
         return -1;
     };
 
-    int headerRowIndex = findHeaderRow(table);
-    if (headerRowIndex < 0 && hasSheet2 && !hasSheet3 && !sheet1Xml.isEmpty()) {
-        table = parseWorksheetToTable(sheet1Xml, sharedStrings);
-        result.documentTitle.clear();
-        headerRowIndex = findHeaderRow(table);
-    }
-
-    if (headerRowIndex < 0) {
-        if (error) {
-            const int firstRow = table.isEmpty() ? 0 : table.firstKey();
-            const QString col1 = table.isEmpty() ? QString() : table.value(firstRow).value(1).trimmed();
-            *error = QString("Unexpected header in column 1: %1").arg(col1.isEmpty() ? QStringLiteral("(empty)") : col1);
-        }
-        return false;
-    }
-
-    const QMap<int, QString> headerRow = table.value(headerRowIndex);
-    for (int col = 1; col <= columnCount; ++col) {
-        const QString value = normalizeHeaderCell(headerRow.value(col));
-        const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
-        if (value != expected) {
-            if (error) {
-                const QString raw = headerRow.value(col).trimmed();
-                *error = QString("Unexpected header in column %1: %2").arg(col).arg(raw.isEmpty() ? QStringLiteral("(empty)") : raw);
-            }
-            return false;
+    TableMap singleTable;
+    if (dataSheetXmls.isEmpty()) {
+        singleTable = hasSheet2 ? parseWorksheetToTable(sheet2Xml, sharedStrings) : parseWorksheetToTable(sheet1Xml, sharedStrings);
+        if (!hasSheet2) {
+            result.documentTitle.clear();
         }
     }
 
-    CanMessage *currentMessage = nullptr;
+    QMap<quint32, CanMessage*> byId;
+    QList<CanMessage*> resultOrder;
     QStringList nodeAccumulator;
 
-    for (auto it = table.begin(); it != table.end(); ++it) {
-        if (it.key() == headerRowIndex) {
-            continue;
-        }
-        const QMap<int, QString> row = it.value();
+    auto processRowIntoMerge = [&](const QMap<int, QString> &row, int headerRowIndex,
+                                   CanMessage **currentMessage) {
         const QString messageName = row.value(1).trimmed();
         const QString signalName = row.value(7).trimmed();
         const QString msgLengthStr = row.value(6).trimmed();
-
-        // Message row: has Msg Length (column 6) and no Signal Name (column 7). Use this instead of
-        // only messageName so that merged cells or Excel rewriting don't turn signal rows into message rows.
         const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
         if (isMessageRow) {
-            currentMessage = new CanMessage();
-            currentMessage->setName(messageName);
-            QString msgType = row.value(2).trimmed();
-            currentMessage->setMessageType(msgType);
-            QString frameFormat = msgType;
-            normalizeMessageTypeFromExcel(&msgType, &frameFormat);
-            currentMessage->setMessageType(msgType);
-            currentMessage->setFrameFormat(frameFormat);
             const QString idText = row.value(3).trimmed();
             bool idOk = false;
-            currentMessage->setId(static_cast<quint32>(parseHexToUInt64(idText, &idOk)));
-            currentMessage->setSendType(normalizeSendType(row.value(4).trimmed(), false));
-            currentMessage->setCycleTime(row.value(5).toInt());
-            currentMessage->setLength(row.value(6).toInt());
-            currentMessage->setComment(row.value(8));
-            currentMessage->setCycleTimeFast(row.value(26).toInt());
-            currentMessage->setNrOfRepetitions(row.value(27).toInt());
-            currentMessage->setDelayTime(row.value(28).toInt());
-            currentMessage->setTransmitter(row.value(29).trimmed());
-
-            if (!currentMessage->getTransmitter().isEmpty()) {
-                nodeAccumulator.append(currentMessage->getTransmitter());
+            const quint32 id = static_cast<quint32>(parseHexToUInt64(idText, &idOk));
+            if (!idOk) {
+                return;
             }
-
-            result.messages.append(currentMessage);
-            continue;
-        }
-
-        // Signal row: has Signal Name (column 7); column 6 is empty for signal rows.
-        if (!signalName.isEmpty() && currentMessage) {
-            auto *signal = new CanSignal();
-            signal->setName(signalName);
-            signal->setDescription(row.value(8));
-            const QString byteOrder = row.value(9).toLower();
-            signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
-            const int startByte = row.value(10).toInt();
-            const int startBit = row.value(11).toInt();
-            signal->setStartBit(startByte * 8 + startBit);
-            signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
-            signal->setLength(row.value(13).toInt());
-            const QString dataType = row.value(14).toLower();
-            signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
-            signal->setFactor(row.value(15).toDouble());
-            signal->setOffset(row.value(16).toDouble());
-            signal->setMin(row.value(17).toDouble());
-            signal->setMax(row.value(18).toDouble());
-            signal->setUnit(row.value(24).trimmed());
-
-            bool initOk = false;
-            const quint64 init = parseHexToUInt64(row.value(21), &initOk);
-            signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
-            signal->setInvalidValueHex(row.value(22).trimmed());
-            signal->setInactiveValueHex(row.value(23).trimmed());
-
-            const QString receivers = row.value(29).trimmed();
-            const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
-            signal->setReceivers(receiverList);
-            for (const QString &receiver : receiverList) {
-                nodeAccumulator.append(receiver);
-            }
-
-            const QStringList valueLines = splitLines(row.value(25));
-            if (!valueLines.isEmpty()) {
-                QMap<int, QString> valueTable;
-                for (const QString &line : valueLines) {
-                    const int colonIndex = line.indexOf(':');
-                    if (colonIndex <= 0) {
-                        continue;
-                    }
-                    bool valueOk = false;
-                    const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
-                    if (!valueOk) {
-                        continue;
-                    }
-                    valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
+            CanMessage *msg = byId.value(id);
+            if (!msg) {
+                msg = new CanMessage();
+                msg->setName(messageName);
+                QString msgType = row.value(2).trimmed();
+                QString frameFormat = msgType;
+                normalizeMessageTypeFromExcel(&msgType, &frameFormat);
+                msg->setMessageType(msgType);
+                msg->setFrameFormat(frameFormat);
+                msg->setId(id);
+                msg->setSendType(normalizeSendType(row.value(4).trimmed(), false));
+                msg->setCycleTime(row.value(5).toInt());
+                msg->setLength(row.value(6).toInt());
+                msg->setComment(row.value(8));
+                msg->setCycleTimeFast(row.value(26).toInt());
+                msg->setNrOfRepetitions(row.value(27).toInt());
+                msg->setDelayTime(row.value(28).toInt());
+                msg->setTransmitter(row.value(29).trimmed());
+                byId[id] = msg;
+                resultOrder.append(msg);
+                if (!msg->getTransmitter().isEmpty()) {
+                    nodeAccumulator.append(msg->getTransmitter());
                 }
-                signal->setValueTable(valueTable);
+            } else {
+                const QString tx = row.value(29).trimmed();
+                if (!tx.isEmpty()) {
+                    msg->setTransmitter(tx);
+                }
             }
+            *currentMessage = msg;
+            return;
+        }
+        if (!signalName.isEmpty() && *currentMessage) {
+            CanMessage *msg = *currentMessage;
+            CanSignal *existingSignal = msg->getSignal(signalName);
+            if (!existingSignal) {
+                auto *signal = new CanSignal();
+                signal->setName(signalName);
+                signal->setDescription(row.value(8));
+                const QString byteOrder = row.value(9).toLower();
+                signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
+                const int startByte = row.value(10).toInt();
+                const int startBit = row.value(11).toInt();
+                signal->setStartBit(startByte * 8 + startBit);
+                signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
+                signal->setLength(row.value(13).toInt());
+                const QString dataType = row.value(14).toLower();
+                signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
+                signal->setFactor(row.value(15).toDouble());
+                signal->setOffset(row.value(16).toDouble());
+                signal->setMin(row.value(17).toDouble());
+                signal->setMax(row.value(18).toDouble());
+                signal->setUnit(row.value(24).trimmed());
+                bool initOk = false;
+                const quint64 init = parseHexToUInt64(row.value(21), &initOk);
+                signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
+                signal->setInvalidValueHex(row.value(22).trimmed());
+                signal->setInactiveValueHex(row.value(23).trimmed());
+                const QString receivers = row.value(29).trimmed();
+                const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                signal->setReceivers(receiverList);
+                for (const QString &receiver : receiverList) {
+                    nodeAccumulator.append(receiver);
+                }
+                const QStringList valueLines = splitLines(row.value(25));
+                if (!valueLines.isEmpty()) {
+                    QMap<int, QString> valueTable;
+                    for (const QString &line : valueLines) {
+                        const int colonIndex = line.indexOf(':');
+                        if (colonIndex <= 0) continue;
+                        bool valueOk = false;
+                        const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
+                        if (!valueOk) continue;
+                        valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
+                    }
+                    signal->setValueTable(valueTable);
+                }
+                msg->addSignal(signal);
+            } else {
+                const QString receivers = row.value(29).trimmed();
+                const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                QStringList merged = existingSignal->getReceivers();
+                for (const QString &r : receiverList) {
+                    if (!merged.contains(r)) {
+                        merged.append(r);
+                    }
+                }
+                existingSignal->setReceivers(merged);
+                for (const QString &receiver : receiverList) {
+                    nodeAccumulator.append(receiver);
+                }
+            }
+        }
+    };
 
-            currentMessage->addSignal(signal);
+    if (!dataSheetXmls.isEmpty()) {
+        int headerRowIndex = -1;
+        for (const QByteArray &dataXml : dataSheetXmls) {
+            TableMap table = parseWorksheetToTable(dataXml, sharedStrings);
+            if (headerRowIndex < 0) {
+                headerRowIndex = findHeaderRow(table);
+                if (headerRowIndex < 0) {
+                    if (error) {
+                        *error = QStringLiteral("Unexpected header in column 1 in data sheet.");
+                    }
+                    return false;
+                }
+                const QMap<int, QString> headerRow = table.value(headerRowIndex);
+                for (int col = 1; col <= columnCount; ++col) {
+                    const QString value = normalizeHeaderCell(headerRow.value(col));
+                    const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
+                    if (value != expected) {
+                        if (error) {
+                            *error = QString("Unexpected header in column %1: %2").arg(col).arg(headerRow.value(col).trimmed());
+                        }
+                        return false;
+                    }
+                }
+            }
+            CanMessage *currentMessage = nullptr;
+            for (auto it = table.begin(); it != table.end(); ++it) {
+                if (it.key() == headerRowIndex) continue;
+                processRowIntoMerge(it.value(), headerRowIndex, &currentMessage);
+            }
+        }
+        result.messages = resultOrder;
+    } else {
+        int headerRowIndex = findHeaderRow(singleTable);
+        if (headerRowIndex < 0) {
+            if (error) {
+                const int firstRow = singleTable.isEmpty() ? 0 : singleTable.firstKey();
+                const QString col1 = singleTable.isEmpty() ? QString() : singleTable.value(firstRow).value(1).trimmed();
+                *error = QString("Unexpected header in column 1: %1").arg(col1.isEmpty() ? QStringLiteral("(empty)") : col1);
+            }
+            return false;
+        }
+        const QMap<int, QString> headerRow = singleTable.value(headerRowIndex);
+        for (int col = 1; col <= columnCount; ++col) {
+            const QString value = normalizeHeaderCell(headerRow.value(col));
+            const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
+            if (value != expected) {
+                if (error) {
+                    *error = QString("Unexpected header in column %1: %2").arg(col).arg(headerRow.value(col).trimmed());
+                }
+                return false;
+            }
+        }
+        CanMessage *currentMessage = nullptr;
+        for (auto it = singleTable.begin(); it != singleTable.end(); ++it) {
+            if (it.key() == headerRowIndex) continue;
+            const QMap<int, QString> row = it.value();
+            const QString messageName = row.value(1).trimmed();
+            const QString signalName = row.value(7).trimmed();
+            const QString msgLengthStr = row.value(6).trimmed();
+            const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
+            if (isMessageRow) {
+                currentMessage = new CanMessage();
+                currentMessage->setName(messageName);
+                QString msgType = row.value(2).trimmed();
+                QString frameFormat = msgType;
+                normalizeMessageTypeFromExcel(&msgType, &frameFormat);
+                currentMessage->setMessageType(msgType);
+                currentMessage->setFrameFormat(frameFormat);
+                bool idOk = false;
+                currentMessage->setId(static_cast<quint32>(parseHexToUInt64(row.value(3).trimmed(), &idOk)));
+                currentMessage->setSendType(normalizeSendType(row.value(4).trimmed(), false));
+                currentMessage->setCycleTime(row.value(5).toInt());
+                currentMessage->setLength(row.value(6).toInt());
+                currentMessage->setComment(row.value(8));
+                currentMessage->setCycleTimeFast(row.value(26).toInt());
+                currentMessage->setNrOfRepetitions(row.value(27).toInt());
+                currentMessage->setDelayTime(row.value(28).toInt());
+                currentMessage->setTransmitter(row.value(29).trimmed());
+                if (!currentMessage->getTransmitter().isEmpty()) {
+                    nodeAccumulator.append(currentMessage->getTransmitter());
+                }
+                result.messages.append(currentMessage);
+                continue;
+            }
+            if (!signalName.isEmpty() && currentMessage) {
+                auto *signal = new CanSignal();
+                signal->setName(signalName);
+                signal->setDescription(row.value(8));
+                const QString byteOrder = row.value(9).toLower();
+                signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
+                const int startByte = row.value(10).toInt();
+                const int startBit = row.value(11).toInt();
+                signal->setStartBit(startByte * 8 + startBit);
+                signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
+                signal->setLength(row.value(13).toInt());
+                const QString dataType = row.value(14).toLower();
+                signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
+                signal->setFactor(row.value(15).toDouble());
+                signal->setOffset(row.value(16).toDouble());
+                signal->setMin(row.value(17).toDouble());
+                signal->setMax(row.value(18).toDouble());
+                signal->setUnit(row.value(24).trimmed());
+                bool initOk = false;
+                const quint64 init = parseHexToUInt64(row.value(21), &initOk);
+                signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
+                signal->setInvalidValueHex(row.value(22).trimmed());
+                signal->setInactiveValueHex(row.value(23).trimmed());
+                const QString receivers = row.value(29).trimmed();
+                const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                signal->setReceivers(receiverList);
+                for (const QString &receiver : receiverList) {
+                    nodeAccumulator.append(receiver);
+                }
+                const QStringList valueLines = splitLines(row.value(25));
+                if (!valueLines.isEmpty()) {
+                    QMap<int, QString> valueTable;
+                    for (const QString &line : valueLines) {
+                        const int colonIndex = line.indexOf(':');
+                        if (colonIndex <= 0) continue;
+                        bool valueOk = false;
+                        const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
+                        if (!valueOk) continue;
+                        valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
+                    }
+                    signal->setValueTable(valueTable);
+                }
+                currentMessage->addSignal(signal);
+            }
         }
     }
 
