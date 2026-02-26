@@ -5,6 +5,7 @@
 #include <QList>
 #include <QMap>
 #include <QStringList>
+#include <QtGlobal>
 #include "cansignal.h"
 
 class CanMessage
@@ -13,7 +14,7 @@ public:
     CanMessage();
     
     // Getters
-    int getId() const { return m_id; }
+    quint32 getId() const { return m_id; }
     QString getName() const { return m_name; }
     int getLength() const { return m_length; }
     QString getTransmitter() const { return m_transmitter; }
@@ -30,7 +31,7 @@ public:
     QStringList getReceivers() const { return m_receivers; }
     
     // Setters
-    void setId(int id) { m_id = id; }
+    void setId(quint32 id) { m_id = id; }
     void setName(const QString &name) { m_name = name; }
     void setLength(int length) { m_length = length; }
     void setTransmitter(const QString &transmitter) { m_transmitter = transmitter; }
@@ -50,7 +51,7 @@ public:
     QString getFormattedLength() const;
 
 private:
-    int m_id;
+    quint32 m_id;
     QString m_name;
     int m_length;
     QString m_transmitter;

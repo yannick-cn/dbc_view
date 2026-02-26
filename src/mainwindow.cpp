@@ -287,6 +287,7 @@ void MainWindow::exportToDbc()
                           QString(),
                           m_dbcParser->getDocumentTitle(),
                           m_dbcParser->getChangeHistory(),
+                          m_dbcParser->getGlobalValueTables(),
                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
         return;

@@ -5,6 +5,7 @@
 #include <QStringList>
 #include <QList>
 #include <QMap>
+#include <QtGlobal>
 #include "canmessage.h"
 #include "dbcexcelconverter.h"
 
@@ -17,13 +18,15 @@ public:
     bool parseFile(const QString &filePath);
     bool loadFromExcelImport(DbcExcelConverter::ImportResult &result);
     const QList<CanMessage*> &getMessages() const { return m_messages; }
-    CanMessage* getMessage(int id) const;
+    CanMessage* getMessage(quint32 id) const;
     QString getVersion() const { return m_version; }
     QString getBusType() const { return m_busType; }
     QString getDocumentTitle() const { return m_documentTitle; }
     QList<DbcExcelConverter::ChangeHistoryEntry> getChangeHistory() const { return m_changeHistory; }
     QStringList getNodes() const { return m_nodes; }
-    
+    /** Global named value tables (VAL_TABLE_ name val "desc" ...). Order preserved. */
+    QList<QPair<QString, QMap<int, QString>>> getGlobalValueTables() const { return m_globalValueTables; }
+
     void clear();
 
 private:
@@ -33,14 +36,16 @@ private:
     QList<DbcExcelConverter::ChangeHistoryEntry> m_changeHistory;
     QStringList m_nodes;
     QList<CanMessage*> m_messages;
-    QMap<int, CanMessage*> m_messageMap;
+    QMap<quint32, CanMessage*> m_messageMap;
     QMap<QString, QStringList> m_messageAttributeEnums;
     QMap<QString, QStringList> m_signalAttributeEnums;
-    
+    QList<QPair<QString, QMap<int, QString>>> m_globalValueTables;
+
     bool parseLine(const QString &line);
     bool parseMessage(const QString &line);
     bool parseSignal(const QString &line);
     bool parseValueTable(const QString &line);
+    bool parseGlobalValueTable(const QString &line);
     bool parseAttribute(const QString &line);
     bool parseAttributeDefinition(const QString &line);
     bool parseComment(const QString &line);

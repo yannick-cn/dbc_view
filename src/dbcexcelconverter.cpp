@@ -808,7 +808,7 @@ QByteArray generateChangeHistorySheetXml(const QList<DbcExcelConverter::ChangeHi
     return data;
 }
 
-QByteArray generateWorksheetXml(const QList<CanMessage*> &messages)
+QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QString &busType)
 {
     const QStringList headers = headerLabels();
     const int columnCount = headers.size();
@@ -904,26 +904,19 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages)
         writer.writeAttribute("ht", "24");
         writer.writeAttribute("customHeight", "1");
         writeInlineStringCell(writer, currentRow, 1, 2, message->getName());
-        writeInlineStringCell(writer, currentRow, 2, 2,
-            message->getMessageType().isEmpty() ? message->getFrameFormat() : message->getMessageType());
+        QString msgType = message->getMessageType().isEmpty() ? message->getFrameFormat() : message->getMessageType();
+        if (msgType.isEmpty()) {
+            msgType = busType.contains(QLatin1String("FD"), Qt::CaseInsensitive) ? QStringLiteral("CANFD Standard") : QStringLiteral("CAN Standard");
+        }
+        writeInlineStringCell(writer, currentRow, 2, 2, msgType);
         writeInlineStringCell(writer, currentRow, 3, 2, QString("0x%1").arg(message->getId(), 0, 16).toUpper());
         writeInlineStringCell(writer, currentRow, 4, 2, message->getSendType());
-        if (message->getCycleTime() != 0) {
-            writeNumericCell(writer, currentRow, 5, 2, message->getCycleTime());
-        }
+        writeNumericCell(writer, currentRow, 5, 2, message->getCycleTime());
         writeNumericCell(writer, currentRow, 6, 2, message->getLength());
-        if (!message->getComment().isEmpty()) {
-            writeInlineStringCell(writer, currentRow, 8, 2, message->getComment());
-        }
-        if (message->getCycleTimeFast() != 0) {
-            writeNumericCell(writer, currentRow, 26, 2, message->getCycleTimeFast());
-        }
-        if (message->getNrOfRepetitions() != 0) {
-            writeNumericCell(writer, currentRow, 27, 2, message->getNrOfRepetitions());
-        }
-        if (message->getDelayTime() != 0) {
-            writeNumericCell(writer, currentRow, 28, 2, message->getDelayTime());
-        }
+        writeInlineStringCell(writer, currentRow, 8, 2, message->getComment());
+        writeNumericCell(writer, currentRow, 26, 2, message->getCycleTimeFast());
+        writeNumericCell(writer, currentRow, 27, 2, message->getNrOfRepetitions());
+        writeNumericCell(writer, currentRow, 28, 2, message->getDelayTime());
         writeInlineStringCell(writer, currentRow, 29, 2, message->getTransmitter());
         writer.writeEndElement();
 
@@ -1080,6 +1073,26 @@ QString normalizeSendType(const QString &value, bool isSignal)
         return choices.at(idx);
     }
     return value;
+}
+
+// Normalize Msg Type from Excel (e.g. "CAN FD Standard" or "CANFD Standard") to canonical form
+// and return the DBC frame format string for setFrameFormat.
+void normalizeMessageTypeFromExcel(QString *messageType, QString *frameFormat)
+{
+    if (!messageType || messageType->isEmpty()) {
+        return;
+    }
+    QString type = messageType->trimmed();
+    const bool hasCanFd = type.contains(QLatin1String("CAN FD"), Qt::CaseInsensitive)
+                          || type.contains(QLatin1String("CANFD"), Qt::CaseInsensitive);
+    const bool hasExtended = type.contains(QLatin1String("Extended"), Qt::CaseInsensitive);
+    if (hasCanFd) {
+        *messageType = hasExtended ? QStringLiteral("CANFD Extended") : QStringLiteral("CANFD Standard");
+        *frameFormat = hasExtended ? QStringLiteral("ExtendedCAN_FD") : QStringLiteral("StandardCAN_FD");
+    } else {
+        *messageType = hasExtended ? QStringLiteral("CAN Extended") : QStringLiteral("CAN Standard");
+        *frameFormat = hasExtended ? QStringLiteral("ExtendedCAN") : QStringLiteral("StandardCAN");
+    }
 }
 
 QStringList parseSharedStrings(const QByteArray &sstXml)
@@ -1292,7 +1305,6 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
                                       QString *error)
 {
     Q_UNUSED(version);
-    Q_UNUSED(busType);
     Q_UNUSED(nodes);
 
     static const QString kDefaultDocumentTitle = QStringLiteral(
@@ -1314,7 +1326,7 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
 
     entries.append({QStringLiteral("xl/worksheets/sheet1.xml"), generateCoverSheetXml(coverTitle)});
     entries.append({QStringLiteral("xl/worksheets/sheet2.xml"), generateChangeHistorySheetXml(changeHistory)});
-    entries.append({QStringLiteral("xl/worksheets/sheet3.xml"), generateWorksheetXml(messages)});
+    entries.append({QStringLiteral("xl/worksheets/sheet3.xml"), generateWorksheetXml(messages, busType)});
 
     return writeZipArchive(filePath, entries, error);
 }
@@ -1423,14 +1435,23 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
         const QMap<int, QString> row = it.value();
         const QString messageName = row.value(1).trimmed();
         const QString signalName = row.value(7).trimmed();
+        const QString msgLengthStr = row.value(6).trimmed();
 
-        if (!messageName.isEmpty()) {
+        // Message row: has Msg Length (column 6) and no Signal Name (column 7). Use this instead of
+        // only messageName so that merged cells or Excel rewriting don't turn signal rows into message rows.
+        const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
+        if (isMessageRow) {
             currentMessage = new CanMessage();
             currentMessage->setName(messageName);
-            currentMessage->setMessageType(row.value(2).trimmed());
+            QString msgType = row.value(2).trimmed();
+            currentMessage->setMessageType(msgType);
+            QString frameFormat = msgType;
+            normalizeMessageTypeFromExcel(&msgType, &frameFormat);
+            currentMessage->setMessageType(msgType);
+            currentMessage->setFrameFormat(frameFormat);
             const QString idText = row.value(3).trimmed();
             bool idOk = false;
-            currentMessage->setId(parseHexToUInt64(idText, &idOk));
+            currentMessage->setId(static_cast<quint32>(parseHexToUInt64(idText, &idOk)));
             currentMessage->setSendType(normalizeSendType(row.value(4).trimmed(), false));
             currentMessage->setCycleTime(row.value(5).toInt());
             currentMessage->setLength(row.value(6).toInt());
@@ -1439,7 +1460,6 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
             currentMessage->setNrOfRepetitions(row.value(27).toInt());
             currentMessage->setDelayTime(row.value(28).toInt());
             currentMessage->setTransmitter(row.value(29).trimmed());
-            currentMessage->setFrameFormat(currentMessage->getMessageType());
 
             if (!currentMessage->getTransmitter().isEmpty()) {
                 nodeAccumulator.append(currentMessage->getTransmitter());
@@ -1449,6 +1469,7 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
             continue;
         }
 
+        // Signal row: has Signal Name (column 7); column 6 is empty for signal rows.
         if (!signalName.isEmpty() && currentMessage) {
             auto *signal = new CanSignal();
             signal->setName(signalName);
@@ -1505,11 +1526,34 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
 
     nodeAccumulator.removeDuplicates();
     result.nodes = nodeAccumulator;
-    result.busType = "CAN";
+    result.busType = QStringLiteral("CAN");
     for (const CanMessage *message : std::as_const(result.messages)) {
-        if (message && message->getMessageType().contains("CANFD", Qt::CaseInsensitive)) {
-            result.busType = "CAN FD";
+        const QString mt = message ? message->getMessageType() : QString();
+        if (message && (mt.contains(QStringLiteral("CANFD"), Qt::CaseInsensitive) || mt.contains(QStringLiteral("CAN FD"), Qt::CaseInsensitive))) {
+            result.busType = QStringLiteral("CAN FD");
             break;
+        }
+    }
+    if (result.busType == QStringLiteral("CAN")) {
+        for (const CanMessage *message : std::as_const(result.messages)) {
+            if (message && message->getLength() > 8) {
+                result.busType = QStringLiteral("CAN FD");
+                break;
+            }
+        }
+    }
+    for (CanMessage *message : result.messages) {
+        if (!message) {
+            continue;
+        }
+        if (message->getMessageType().isEmpty() && message->getFrameFormat().isEmpty()) {
+            if (result.busType.contains(QStringLiteral("FD"), Qt::CaseInsensitive)) {
+                message->setMessageType(QStringLiteral("CANFD Standard"));
+                message->setFrameFormat(QStringLiteral("StandardCAN_FD"));
+            } else {
+                message->setMessageType(QStringLiteral("CAN Standard"));
+                message->setFrameFormat(QStringLiteral("StandardCAN"));
+            }
         }
     }
     result.version = "Generated by Excel Import";

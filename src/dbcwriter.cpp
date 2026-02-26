@@ -126,7 +126,8 @@ QString canonicalFrameFormat(const CanMessage *message)
     }
 
     const QString type = message->getMessageType();
-    if (type.contains("CANFD", Qt::CaseInsensitive)) {
+    const bool isCanFdType = type.contains("CANFD", Qt::CaseInsensitive) || type.contains("CAN FD", Qt::CaseInsensitive);
+    if (isCanFdType) {
         return type.contains("Extended", Qt::CaseInsensitive) ? "ExtendedCAN_FD" : "StandardCAN_FD";
     }
     if (type.contains("Extended", Qt::CaseInsensitive)) {
@@ -166,6 +167,7 @@ bool DbcWriter::write(const QString &filePath,
                       const QString &dbComment,
                       const QString &documentTitle,
                       const QList<DbcExcelConverter::ChangeHistoryEntry> &changeHistory,
+                      const GlobalValueTables &globalValueTables,
                       QString *error)
 {
     QFile file(filePath);
@@ -223,6 +225,17 @@ bool DbcWriter::write(const QString &filePath,
             out << ' ' << node;
         }
         out << "\n\n";
+    }
+
+    for (const auto &table : globalValueTables) {
+        out << "VAL_TABLE_ " << table.first;
+        for (auto it = table.second.cbegin(); it != table.second.cend(); ++it) {
+            out << ' ' << it.key() << " \"" << escape(it.value()) << '"';
+        }
+        out << " ;\n";
+    }
+    if (!globalValueTables.isEmpty()) {
+        out << "\n";
     }
 
     for (CanMessage *message : messages) {
@@ -341,7 +354,8 @@ bool DbcWriter::write(const QString &filePath,
     out << "BA_DEF_DEF_ \"GenMsgDelayTime\" 0;\n";
     out << "BA_DEF_DEF_ \"GenMsgNrOfRepetition\" 0;\n";
     out << "BA_DEF_DEF_ \"GenMsgSendType\" \"Cycle\";\n";
-    out << "BA_DEF_DEF_ \"VFrameFormat\" \"StandardCAN\";\n";
+    const bool isCanFd = busType.contains(QLatin1String("FD"), Qt::CaseInsensitive);
+    out << "BA_DEF_DEF_ \"VFrameFormat\" \"" << (isCanFd ? "StandardCAN_FD" : "StandardCAN") << "\";\n";
     out << "BA_DEF_DEF_ \"GenSigStartDelayTime\" 0;\n";
     out << "BA_DEF_DEF_ \"GenSigILSupport\" \"Yes\";\n";
     out << "BA_DEF_DEF_ \"GenSigSNA\" \"\";\n";
@@ -412,14 +426,17 @@ bool DbcWriter::write(const QString &filePath,
                 << message->getDelayTime() << ";\n";
         }
 
-        const QString frameFormat = canonicalFrameFormat(message);
+        QString frameFormat = canonicalFrameFormat(message);
+        if (frameFormat == QLatin1String("StandardCAN") && busType.contains(QLatin1String("FD"), Qt::CaseInsensitive)) {
+            frameFormat = QLatin1String("StandardCAN_FD");
+        }
         out << "BA_ \"VFrameFormat\" BO_ " << message->getId() << ' '
             << frameFormatIndex(frameFormat) << ";\n";
 
         out << "BA_ \"GenMsgSendType\" BO_ " << message->getId() << ' '
             << messageSendTypeIndex(message->getSendType()) << ";\n";
 
-        const int msgId = message->getId();
+        const quint32 msgId = message->getId();
         if (msgId == 1186 || msgId == 1187 || msgId == 1188 || msgId == 1152 || msgId == 1189 || msgId == 1190) {
             out << "BA_ \"NmMessage\" BO_ " << msgId << " 1;\n";
         }

@@ -57,6 +57,7 @@ void DbcParser::clear()
     m_changeHistory.clear();
     m_messageAttributeEnums.clear();
     m_signalAttributeEnums.clear();
+    m_globalValueTables.clear();
 }
 
 bool DbcParser::parseFile(const QString &filePath)
@@ -141,6 +142,10 @@ bool DbcParser::parseLine(const QString &line)
         return parseAttribute(line);
     }
 
+    if (line.startsWith("VAL_TABLE_")) {
+        return parseGlobalValueTable(line);
+    }
+
     if (line.startsWith("VAL_")) {
         return parseValueTable(line);
     }
@@ -165,7 +170,7 @@ bool DbcParser::parseMessage(const QString &line)
     }
 
     auto *message = new CanMessage();
-    message->setId(match.captured(1).toInt());
+    message->setId(match.captured(1).toUInt());
     message->setName(match.captured(2).trimmed());
     message->setLength(match.captured(3).toInt());
     message->setTransmitter(match.captured(4));
@@ -213,7 +218,7 @@ bool DbcParser::parseValueTable(const QString &line)
         return false;
     }
 
-    CanMessage *message = getMessage(match.captured(1).toInt());
+    CanMessage *message = getMessage(match.captured(1).toUInt());
     if (!message) {
         return false;
     }
@@ -288,7 +293,7 @@ bool DbcParser::parseAttribute(const QString &line)
     const QRegularExpressionMatch msgMatch = msgRegex.match(line);
     if (msgMatch.hasMatch()) {
         const QString attrName = msgMatch.captured(1);
-        CanMessage *message = getMessage(msgMatch.captured(2).toInt());
+        CanMessage *message = getMessage(msgMatch.captured(2).toUInt());
         if (!message) {
             return true;
         }
@@ -321,7 +326,7 @@ bool DbcParser::parseAttribute(const QString &line)
     const QRegularExpressionMatch sigMatch = sigRegex.match(line);
     if (sigMatch.hasMatch()) {
         const QString attrName = sigMatch.captured(1);
-        CanMessage *message = getMessage(sigMatch.captured(2).toInt());
+        CanMessage *message = getMessage(sigMatch.captured(2).toUInt());
         if (!message) {
             return true;
         }
@@ -382,7 +387,7 @@ bool DbcParser::parseComment(const QString &line)
     QRegularExpression msgRegex = makeRegex("CM_\\s+BO_\\s+(\\d+)\\s+\"([^\"]*)\";");
     const QRegularExpressionMatch msgMatch = msgRegex.match(line);
     if (msgMatch.hasMatch()) {
-        CanMessage *message = getMessage(msgMatch.captured(1).toInt());
+        CanMessage *message = getMessage(msgMatch.captured(1).toUInt());
         if (message) {
             message->setComment(msgMatch.captured(2));
         }
@@ -392,7 +397,7 @@ bool DbcParser::parseComment(const QString &line)
     QRegularExpression sigRegex = makeRegex("CM_\\s+SG_\\s+(\\d+)\\s+([^\\s]+)\\s+\"([^\"]*)\";");
     const QRegularExpressionMatch sigMatch = sigRegex.match(line);
     if (sigMatch.hasMatch()) {
-        CanMessage *message = getMessage(sigMatch.captured(1).toInt());
+        CanMessage *message = getMessage(sigMatch.captured(1).toUInt());
         if (!message) {
             return true;
         }
@@ -417,14 +422,35 @@ bool DbcParser::parseBoTxBu(const QString &line)
     receiversStr.remove(';');
     QStringList receivers = receiversStr.split(QRegularExpression(QStringLiteral("[\\s,]+")), QString::SkipEmptyParts);
 
-    CanMessage *message = getMessage(match.captured(1).toInt());
+    CanMessage *message = getMessage(match.captured(1).toUInt());
     if (message) {
         message->setReceivers(receivers);
     }
     return true;
 }
 
-CanMessage *DbcParser::getMessage(int id) const
+bool DbcParser::parseGlobalValueTable(const QString &line)
+{
+    QRegularExpression regex = makeRegex("VAL_TABLE_\\s+([^\\s]+)\\s+(.+);");
+    const QRegularExpressionMatch match = regex.match(line);
+    if (!match.hasMatch()) {
+        return false;
+    }
+
+    const QString name = match.captured(1).trimmed();
+    const QString rest = match.captured(2).trimmed();
+    QMap<int, QString> valueTable;
+    QRegularExpression valueRegex = makeRegex("(-?\\d+)\\s+\"([^\"]*)\"");
+    QRegularExpressionMatchIterator it = valueRegex.globalMatch(rest);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch valueMatch = it.next();
+        valueTable[valueMatch.captured(1).toInt()] = valueMatch.captured(2);
+    }
+    m_globalValueTables.append(qMakePair(name, valueTable));
+    return true;
+}
+
+CanMessage *DbcParser::getMessage(quint32 id) const
 {
     return m_messageMap.value(id, nullptr);
 }
