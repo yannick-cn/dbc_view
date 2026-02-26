@@ -264,35 +264,48 @@ void SignalLayoutWidget::buildLayout()
     m_table->setRowCount(dlc);
 
     QStringList headers;
-    headers << "0" << "1" << "2" << "3" << "4" << "5" << "6" << "7";
+    headers << "7" << "6" << "5" << "4" << "3" << "2" << "1" << "0";
     m_table->setHorizontalHeaderLabels(headers);
 
-    // Build map: (row, col) -> signal index (-1 if no signal)
+    // DBC 约定：@0 = Motorola（大端，startBit 为 MSB），@1 = Intel（小端，startBit 为 LSB）
+    // 物理位 c：0=LSB、7=MSB。显示列 0 对应 bit 7（左 MSB），显示列 7 对应 bit 0（右 LSB），故 displayCol = 7 - c
     QVector<QVector<int>> cellSignal(dlc, QVector<int>(8, -1));
-    // Start cell of each signal (row, col) for showing name
     QHash<int, QPair<int, int>> signalStartCell;
     for (int i = 0; i < signalList.size(); ++i) {
         CanSignal *sig = signalList.at(i);
         const int startBit = sig->getStartBit();
         const int length = sig->getLength();
-        const bool motorola = (sig->getByteOrder() != 0);
+        const bool motorola = (sig->getByteOrder() == 0);
         int startRow = -1, startCol = -1;
+        int bitIndex = startBit;
         for (int k = 0; k < length; ++k) {
-            const int bitIndex = startBit + k;
             int r, c;
             if (motorola) {
                 r = bitIndex / 8;
                 c = bitIndex % 8;
+                if (k == 0) {
+                    startRow = r;
+                    startCol = 7 - c;
+                }
+                if (r >= 0 && r < dlc && c >= 0 && c < 8) {
+                    cellSignal[r][7 - c] = i;
+                }
+                if (bitIndex % 8 == 0) {
+                    bitIndex += 15;
+                } else {
+                    bitIndex -= 1;
+                }
             } else {
+                bitIndex = startBit + k;
                 r = bitIndex / 8;
-                c = 7 - (bitIndex % 8);
-            }
-            if (k == 0) {
-                startRow = r;
-                startCol = c;
-            }
-            if (r >= 0 && r < dlc && c >= 0 && c < 8) {
-                cellSignal[r][c] = i;
+                c = bitIndex % 8;
+                if (k == 0) {
+                    startRow = r;
+                    startCol = 7 - c;
+                }
+                if (r >= 0 && r < dlc && c >= 0 && c < 8) {
+                    cellSignal[r][7 - c] = i;
+                }
             }
         }
         if (startRow >= 0 && startCol >= 0) {
@@ -302,7 +315,7 @@ void SignalLayoutWidget::buildLayout()
 
     for (int row = 0; row < dlc; ++row) {
         for (int col = 0; col < 8; ++col) {
-            const int globalBit = cellToBit(row, col);
+            const int globalBit = row * 8 + (7 - col);
             const int sigIndex = cellSignal[row][col];
 
             QString cellText;
