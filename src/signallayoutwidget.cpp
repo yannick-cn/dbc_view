@@ -7,6 +7,8 @@
 
 namespace {
 
+const int kMaxSignalNameChars = 12;
+
 const QList<QColor> kDefaultColors = {
     QColor(0x8B, 0xC3, 0x4A),  // light green
     QColor(0x42, 0xA5, 0xF5),  // blue
@@ -18,6 +20,11 @@ const QList<QColor> kDefaultColors = {
     QColor(0x7E, 0x57, 0xC2),  // deep purple
     QColor(0xEF, 0x53, 0x50),  // red
     QColor(0x66, 0xBB, 0x6A),  // green
+    QColor(0x5C, 0x6B, 0xC0),  // indigo
+    QColor(0x26, 0xC6, 0xDA),  // cyan
+    QColor(0xD4, 0xE1, 0x57),  // lime
+    QColor(0xFF, 0x70, 0x43),  // deep orange
+    QColor(0xBC, 0xAA, 0xA4),  // brown
 };
 
 } // namespace
@@ -54,10 +61,10 @@ void SignalLayoutWidget::bitToCell(int bit, int *row, int *col)
 
 QColor SignalLayoutWidget::colorForSignal(int signalIndex) const
 {
-    if (signalIndex < 0 || signalIndex >= m_signalColors.size()) {
+    if (signalIndex < 0 || m_signalColors.isEmpty()) {
         return QColor(0xE0, 0xE0, 0xE0);
     }
-    return m_signalColors.at(signalIndex);
+    return m_signalColors.at(signalIndex % m_signalColors.size());
 }
 
 void SignalLayoutWidget::setMessage(CanMessage *message)
@@ -89,29 +96,25 @@ void SignalLayoutWidget::buildLayout()
 
     const QList<CanSignal*> signalList = m_message->getSignals();
 
-    // Columns: signal name (for this row) + 8 bits per byte -> we have dlc rows, each row is one byte
-    // So we need one column for "signal name" and 8 columns for bits. But each row is one byte, so we have dlc rows.
-    // Left column: show which signal "starts" or is primary in that row (first signal that has a bit in this row)
-    const int nameCol = 0;
-    const int firstBitCol = 1;
-    const int totalCols = firstBitCol + 8;
-
+    // Grid: 8 columns (0-7), one row per byte. Signal names go inside the grid (in each signal's first cell).
+    const int totalCols = 8;
     m_table->setColumnCount(totalCols);
     m_table->setRowCount(dlc);
 
     QStringList headers;
-    headers << "" << "0" << "1" << "2" << "3" << "4" << "5" << "6" << "7";
+    headers << "0" << "1" << "2" << "3" << "4" << "5" << "6" << "7";
     m_table->setHorizontalHeaderLabels(headers);
 
-    // Build map: (row, col) -> signal index (-1 if no signal, else index in signals)
-    // DBC: Intel (0) = LSB first, startBit is LSB; Motorola (1) = MSB first, startBit is MSB.
-    // Grid: row = byte index, col 0 = MSB, col 7 = LSB. So (row,col) Intel bit = row*8+(7-col), Motorola bit = row*8+col.
+    // Build map: (row, col) -> signal index (-1 if no signal)
     QVector<QVector<int>> cellSignal(dlc, QVector<int>(8, -1));
+    // Start cell of each signal (row, col) for showing name
+    QHash<int, QPair<int, int>> signalStartCell;
     for (int i = 0; i < signalList.size(); ++i) {
         CanSignal *sig = signalList.at(i);
         const int startBit = sig->getStartBit();
         const int length = sig->getLength();
         const bool motorola = (sig->getByteOrder() != 0);
+        int startRow = -1, startCol = -1;
         for (int k = 0; k < length; ++k) {
             const int bitIndex = startBit + k;
             int r, c;
@@ -122,49 +125,53 @@ void SignalLayoutWidget::buildLayout()
                 r = bitIndex / 8;
                 c = 7 - (bitIndex % 8);
             }
+            if (k == 0) {
+                startRow = r;
+                startCol = c;
+            }
             if (r >= 0 && r < dlc && c >= 0 && c < 8) {
                 cellSignal[r][c] = i;
             }
         }
+        if (startRow >= 0 && startCol >= 0) {
+            signalStartCell[i] = qMakePair(startRow, startCol);
+        }
     }
 
     for (int row = 0; row < dlc; ++row) {
-        // Signal name column: show the first signal that has a bit in this row
-        QString nameForRow;
-        int firstSigInRow = -1;
-        for (int col = 0; col < 8; ++col) {
-            int si = cellSignal[row][col];
-            if (si >= 0) {
-                if (firstSigInRow < 0 || si < firstSigInRow) {
-                    firstSigInRow = si;
-                }
-            }
-        }
-        if (firstSigInRow >= 0) {
-            nameForRow = signalList.at(firstSigInRow)->getName();
-        }
-
-        QTableWidgetItem *nameItem = new QTableWidgetItem(nameForRow);
-        nameItem->setFlags(nameItem->flags() & ~Qt::ItemIsEditable);
-        if (firstSigInRow >= 0) {
-            QColor nameBg = colorForSignal(firstSigInRow);
-            if (signalList.at(firstSigInRow) == m_highlightedSignal) {
-                nameBg = nameBg.darker(120);
-            }
-            nameItem->setBackground(nameBg);
-        } else {
-            nameItem->setBackground(QColor(0xF5, 0xF5, 0xF5));
-        }
-        m_table->setItem(row, nameCol, nameItem);
-
         for (int col = 0; col < 8; ++col) {
             const int globalBit = cellToBit(row, col);
             const int sigIndex = cellSignal[row][col];
 
-            QTableWidgetItem *item = new QTableWidgetItem(QString::number(globalBit));
+            QString cellText;
+            QString tooltip;
+            if (sigIndex >= 0) {
+                QPair<int, int> start = signalStartCell.value(sigIndex, qMakePair(-1, -1));
+                if (start.first == row && start.second == col) {
+                    QString fullName = signalList.at(sigIndex)->getName();
+                    if (fullName.length() > kMaxSignalNameChars) {
+                        cellText = fullName.left(kMaxSignalNameChars) + QString("…");
+                        tooltip = fullName;
+                    } else {
+                        cellText = fullName;
+                    }
+                } else {
+                    cellText = QString::number(globalBit);
+                }
+                if (tooltip.isEmpty() && sigIndex >= 0) {
+                    tooltip = signalList.at(sigIndex)->getName();
+                }
+            } else {
+                cellText = QString::number(globalBit);
+            }
+
+            QTableWidgetItem *item = new QTableWidgetItem(cellText);
             item->setTextAlignment(Qt::AlignCenter);
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-            m_table->setItem(row, firstBitCol + col, item);
+            if (!tooltip.isEmpty()) {
+                item->setToolTip(tooltip);
+            }
+            m_table->setItem(row, col, item);
 
             if (sigIndex >= 0) {
                 QColor bg = colorForSignal(sigIndex);
@@ -179,5 +186,7 @@ void SignalLayoutWidget::buildLayout()
     }
 
     m_table->resizeColumnsToContents();
-    m_table->horizontalHeader()->setSectionResizeMode(nameCol, QHeaderView::Stretch);
+    for (int c = 0; c < 8; ++c) {
+        m_table->horizontalHeader()->setSectionResizeMode(c, QHeaderView::Stretch);
+    }
 }

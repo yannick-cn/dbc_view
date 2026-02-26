@@ -348,7 +348,7 @@ void MainWindow::populateMessageTree()
         }
     }
     
-    m_messageTree->expandAll();
+    m_messageTree->collapseAll();
 }
 
 void MainWindow::populateSignalTable(CanMessage *message)

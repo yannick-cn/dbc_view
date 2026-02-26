@@ -37,6 +37,8 @@ private:
     QStringList m_nodes;
     QList<CanMessage*> m_messages;
     QMap<quint32, CanMessage*> m_messageMap;
+    /** When true, current BO_ is VECTOR__INDEPENDENT_SIG_MSG; skip adding it and its SG_ lines. */
+    bool m_skipSignalsForCurrentMessage;
     QMap<QString, QStringList> m_messageAttributeEnums;
     QMap<QString, QStringList> m_signalAttributeEnums;
     QList<QPair<QString, QMap<int, QString>>> m_globalValueTables;

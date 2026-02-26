@@ -31,7 +31,13 @@ QString normalizeFrameFormat(const QString &format)
 }
 }
 
+namespace {
+/** Vector CANdb++ virtual message ID for "independent" (unassigned) signals. Skipped when loading. */
+const quint32 kVectorIndependentSigMsgId = 3221225472U;  // 0xC0000000
+}
+
 DbcParser::DbcParser()
+    : m_skipSignalsForCurrentMessage(false)
 {
 }
 
@@ -42,6 +48,7 @@ DbcParser::~DbcParser()
 
 void DbcParser::clear()
 {
+    m_skipSignalsForCurrentMessage = false;
     for (CanMessage *message : m_messages) {
         for (CanSignal *signal : message->getSignals()) {
             delete signal;
@@ -169,8 +176,15 @@ bool DbcParser::parseMessage(const QString &line)
         return false;
     }
 
+    const quint32 id = match.captured(1).toUInt();
+    if (id == kVectorIndependentSigMsgId) {
+        m_skipSignalsForCurrentMessage = true;
+        return true;
+    }
+    m_skipSignalsForCurrentMessage = false;
+
     auto *message = new CanMessage();
-    message->setId(match.captured(1).toUInt());
+    message->setId(id);
     message->setName(match.captured(2).trimmed());
     message->setLength(match.captured(3).toInt());
     message->setTransmitter(match.captured(4));
@@ -185,7 +199,13 @@ bool DbcParser::parseSignal(const QString &line)
     QRegularExpression regex = makeRegex(
         "SG_\\s+([^\\s:]+)\\s*:\\s*(\\d+)\\|(\\d+)@(\\d+)([+-])\\s*\\(([^,]+),([^)]+)\\)\\s*\\[([^|]+)\\|([^\\]]+)\\]\\s*\"([^\"]*)\"\\s*(.*)");
     const QRegularExpressionMatch match = regex.match(line);
-    if (!match.hasMatch() || m_messages.isEmpty()) {
+    if (!match.hasMatch()) {
+        return false;
+    }
+    if (m_skipSignalsForCurrentMessage) {
+        return true;
+    }
+    if (m_messages.isEmpty()) {
         return false;
     }
 

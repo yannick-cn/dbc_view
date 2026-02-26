@@ -36,20 +36,6 @@ BS_:
 BU_: ARC ADC
 
 
-BO_ 3221225472 VECTOR__INDEPENDENT_SIG_MSG: 0 Vector__XXX
- SG_ ARC_OD_MaintenanceState_Obj_10_F : 0|2@0+ (1,0) [0|3] "" Vector__XXX
- SG_ ARC_OD_ID_12_FL : 0|8@0+ (1,0) [0|255] "" Vector__XXX
- SG_ ARC_OD_DistXStd_Obj_37_FL : 0|8@0+ (0.05,0) [0|12.75] "m" Vector__XXX
- SG_ ARC_OD_MaintenanceState_Obj_17_F : 0|2@0+ (1,0) [0|3] "" Vector__XXX
- SG_ DOW_warningReqRight : 0|2@0+ (1,0) [0|3] "" Vector__XXX
- SG_ BSD_LCA_warningReqRight : 0|2@0+ (1,0) [0|3] "" Vector__XXX
- SG_ DOW_warningReqleft : 0|2@0+ (1,0) [0|3] "" Vector__XXX
- SG_ BSD_LCA_warningReqleft : 0|2@0+ (1,0) [0|3] "" Vector__XXX
- SG_ DOW_FunctionState : 0|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ BSD_FunctionState : 0|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ DOW_FunctionState : 0|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ BSD_FunctionState : 0|1@0+ (1,0) [0|1] "" Vector__XXX
-
 BO_ 118 ARC_ADAS_R: 64 ARC
  SG_ ARC_ADAS_R_RC : 287|4@0+ (1,0) [0|15] "" ADC
  SG_ ARC_ADAS_R_CRC : 295|8@0+ (1,0) [0|255] "" ADC
@@ -6761,7 +6747,6 @@ BO_ 181 EHB_FrP01_B5: 8 ADC
  SG_ EHB_FrP01_B5_CRC : 7|8@0+ (1,0) [0|255] "" ARC
  SG_ EHB_FrP01_B5_RC : 15|4@0+ (1,0) [0|15] "" ARC
 
-CM_ BO_ 3221225472 "This is a message for not used signals, created by Vector CANdb++ DBC OLE DB Provider.";
 CM_ SG_ 1618 ARC_OD_DistX_Obj_02_FL "111";
 CM_ SG_ 1362 ARC_OD_DistX_Obj_02_FR "111";
 CM_ SG_ 1106 ARC_OD_DistX_Obj_02_RR "111";
@@ -6882,8 +6867,6 @@ BA_ "NmType" "AUTOSAR";
 BA_ "NmMessageCount" 255;
 BA_ "NodeLayerModules" BU_ ARC "CANoeILNLVector.dll";
 BA_ "NodeLayerModules" BU_ ADC "CANoeILNLVector.dll";
-BA_ "VFrameFormat" BO_ 3221225472 14;
-BA_ "GenMsgSendType" BO_ 3221225472 0;
 BA_ "GenMsgCycleTime" BO_ 118 50;
 BA_ "VFrameFormat" BO_ 118 14;
 BA_ "GenMsgSendType" BO_ 118 0;
@@ -7303,42 +7286,6 @@ BA_ "VFrameFormat" BO_ 269 14;
 BA_ "GenMsgSendType" BO_ 269 0;
 BA_ "VFrameFormat" BO_ 181 14;
 BA_ "GenMsgSendType" BO_ 181 0;
-BA_ "GenSigSendType" SG_ 3221225472 ARC_OD_MaintenanceState_Obj_10_F 8;
-BA_ "GenSigStartValue" SG_ 3221225472 ARC_OD_MaintenanceState_Obj_10_F 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 ARC_OD_MaintenanceState_Obj_10_F 0;
-BA_ "GenSigSendType" SG_ 3221225472 ARC_OD_ID_12_FL 8;
-BA_ "GenSigStartValue" SG_ 3221225472 ARC_OD_ID_12_FL 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 ARC_OD_ID_12_FL 0;
-BA_ "GenSigSendType" SG_ 3221225472 ARC_OD_DistXStd_Obj_37_FL 8;
-BA_ "GenSigStartValue" SG_ 3221225472 ARC_OD_DistXStd_Obj_37_FL 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 ARC_OD_DistXStd_Obj_37_FL 0;
-BA_ "GenSigSendType" SG_ 3221225472 ARC_OD_MaintenanceState_Obj_17_F 8;
-BA_ "GenSigStartValue" SG_ 3221225472 ARC_OD_MaintenanceState_Obj_17_F 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 ARC_OD_MaintenanceState_Obj_17_F 0;
-BA_ "GenSigSendType" SG_ 3221225472 DOW_warningReqRight 8;
-BA_ "GenSigStartValue" SG_ 3221225472 DOW_warningReqRight 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 DOW_warningReqRight 0;
-BA_ "GenSigSendType" SG_ 3221225472 BSD_LCA_warningReqRight 8;
-BA_ "GenSigStartValue" SG_ 3221225472 BSD_LCA_warningReqRight 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 BSD_LCA_warningReqRight 0;
-BA_ "GenSigSendType" SG_ 3221225472 DOW_warningReqleft 8;
-BA_ "GenSigStartValue" SG_ 3221225472 DOW_warningReqleft 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 DOW_warningReqleft 0;
-BA_ "GenSigSendType" SG_ 3221225472 BSD_LCA_warningReqleft 8;
-BA_ "GenSigStartValue" SG_ 3221225472 BSD_LCA_warningReqleft 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 BSD_LCA_warningReqleft 0;
-BA_ "GenSigSendType" SG_ 3221225472 DOW_FunctionState 8;
-BA_ "GenSigStartValue" SG_ 3221225472 DOW_FunctionState 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 DOW_FunctionState 0;
-BA_ "GenSigSendType" SG_ 3221225472 BSD_FunctionState 8;
-BA_ "GenSigStartValue" SG_ 3221225472 BSD_FunctionState 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 BSD_FunctionState 0;
-BA_ "GenSigSendType" SG_ 3221225472 DOW_FunctionState 8;
-BA_ "GenSigStartValue" SG_ 3221225472 DOW_FunctionState 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 DOW_FunctionState 0;
-BA_ "GenSigSendType" SG_ 3221225472 BSD_FunctionState 8;
-BA_ "GenSigStartValue" SG_ 3221225472 BSD_FunctionState 0;
-BA_ "GenSigInactiveValue" SG_ 3221225472 BSD_FunctionState 0;
 BA_ "GenSigSendType" SG_ 118 ARC_ADAS_R_RC 8;
 BA_ "GenSigStartValue" SG_ 118 ARC_ADAS_R_RC 0;
 BA_ "GenSigInactiveValue" SG_ 118 ARC_ADAS_R_RC 0;
@@ -26632,8 +26579,6 @@ BA_ "GenSigInactiveValue" SG_ 181 EHB_FrP01_B5_CRC 0;
 BA_ "GenSigSendType" SG_ 181 EHB_FrP01_B5_RC 8;
 BA_ "GenSigStartValue" SG_ 181 EHB_FrP01_B5_RC 0;
 BA_ "GenSigInactiveValue" SG_ 181 EHB_FrP01_B5_RC 0;
-VAL_ 3221225472 ARC_OD_MaintenanceState_Obj_10_F 0 "INVALID" 1 "NEW" 2 "MEASURED" 3 "PREDICTED";
-VAL_ 3221225472 ARC_OD_MaintenanceState_Obj_17_F 0 "INVALID" 1 "NEW" 2 "MEASURED" 3 "PREDICTED";
 VAL_ 118 ARC_OD_Classification_BSDLCW_R 0 "Unknow" 1 "Person" 2 "Bimo" 3 "Car" 4 "Truck" 5 "Barrier" 6 "Reserved" 7 "Reserved";
 VAL_ 118 ARC_OD_DynProp_BSDLCW_R 0 "MOVING" 1 "STATIONARY" 2 "ONCOMING" 3 "CROSSING_LEFT2RIGHT" 4 "CROSSING_RIGHT2LEFT" 5 "UNKNOWN" 6 "STOPPED" 7 "RESERVED";
 VAL_ 118 ARC_OD_MaintenanceState_BSDLCW_R 0 "INVALID" 1 "NEW" 2 "MEASURED" 3 "PREDICTED";
