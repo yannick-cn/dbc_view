@@ -1326,6 +1326,7 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
                                       const QList<CanMessage*> &messages,
                                       const QString &documentTitle,
                                       const QList<ChangeHistoryEntry> &changeHistory,
+                                      bool splitByEcu,
                                       QString *error)
 {
     Q_UNUSED(version);
@@ -1337,18 +1338,19 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
         ? kDefaultDocumentTitle
         : documentTitle;
 
-    // One data sheet per BU_ node; if no nodes, one sheet "报文数据"
-    const int dataSheetCount = nodes.isEmpty() ? 1 : nodes.size();
-    const int sheetCount = 2 + dataSheetCount; // 主页 + 变更履历 + data sheets
+    int dataSheetCount;
     QStringList dataSheetNames;
-    if (nodes.isEmpty()) {
-        dataSheetNames.append(QStringLiteral("报文数据"));
-    } else {
+    if (splitByEcu && !nodes.isEmpty()) {
+        dataSheetCount = nodes.size();
         for (const QString &node : nodes) {
             dataSheetNames.append(sanitizeSheetName(node));
         }
+    } else {
+        dataSheetCount = 1;
+        dataSheetNames.append(QStringLiteral("报文数据"));
     }
 
+    const int sheetCount = 2 + dataSheetCount;
     QList<QPair<QString, QByteArray>> entries;
     entries.append({QStringLiteral("[Content_Types].xml"), generateContentTypesXml(sheetCount)});
     entries.append({QStringLiteral("_rels/.rels"), generateRootRels()});
@@ -1361,11 +1363,11 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
     entries.append({QStringLiteral("xl/worksheets/sheet1.xml"), generateCoverSheetXml(coverTitle)});
     entries.append({QStringLiteral("xl/worksheets/sheet2.xml"), generateChangeHistorySheetXml(changeHistory)});
     for (int i = 0; i < dataSheetCount; ++i) {
-        QList<CanMessage*> perNodeMessages = nodes.isEmpty()
-            ? messages
-            : messagesForNode(messages, nodes.at(i));
+        QList<CanMessage*> sheetMessages = (splitByEcu && !nodes.isEmpty())
+            ? messagesForNode(messages, nodes.at(i))
+            : messages;
         const QString path = QStringLiteral("xl/worksheets/sheet%1.xml").arg(i + 3);
-        entries.append({path, generateWorksheetXml(perNodeMessages, busType)});
+        entries.append({path, generateWorksheetXml(sheetMessages, busType)});
     }
 
     return writeZipArchive(filePath, entries, error);

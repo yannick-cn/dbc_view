@@ -39,6 +39,7 @@ public:
                               const QList<CanMessage*> &messages,
                               const QString &documentTitle = QString(),
                               const QList<ChangeHistoryEntry> &changeHistory = QList<ChangeHistoryEntry>(),
+                              bool splitByEcu = true,
                               QString *error = nullptr);
 
     static bool importFromExcel(const QString &filePath,

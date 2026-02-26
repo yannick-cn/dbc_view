@@ -35,7 +35,8 @@ public:
 
 private slots:
     void openFile();
-    void exportToExcel();
+    void exportToExcelByEcu();
+    void exportToExcelSingleSheet();
     void exportToDbc();
     void onMessageSelectionChanged();
     void onSignalSelectionChanged();

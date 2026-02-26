@@ -142,11 +142,16 @@ void MainWindow::setupMenuBar()
     connect(openAction, &QAction::triggered, this, &MainWindow::openFile);
     fileMenu->addAction(openAction);
 
-    QAction *exportExcelAction = new QAction("Export to &Excel...", this);
-    exportExcelAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
-    exportExcelAction->setStatusTip("Export the current DBC as an Excel workbook");
-    connect(exportExcelAction, &QAction::triggered, this, &MainWindow::exportToExcel);
-    fileMenu->addAction(exportExcelAction);
+    QMenu *exportExcelMenu = fileMenu->addMenu("Export to &Excel");
+    QAction *exportExcelByEcuAction = new QAction("By &ECU (multiple sheets)...", this);
+    exportExcelByEcuAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
+    exportExcelByEcuAction->setStatusTip("Export with one sheet per ECU (BU_ node)");
+    connect(exportExcelByEcuAction, &QAction::triggered, this, &MainWindow::exportToExcelByEcu);
+    exportExcelMenu->addAction(exportExcelByEcuAction);
+    QAction *exportExcelSingleAction = new QAction("&Single sheet (no ECU split)...", this);
+    exportExcelSingleAction->setStatusTip("Export all messages in one data sheet");
+    connect(exportExcelSingleAction, &QAction::triggered, this, &MainWindow::exportToExcelSingleSheet);
+    exportExcelMenu->addAction(exportExcelSingleAction);
 
     QAction *exportDbcAction = new QAction("Export to &DBC...", this);
     exportDbcAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S));
@@ -217,7 +222,7 @@ void MainWindow::openFile()
     }
 }
 
-void MainWindow::exportToExcel()
+void MainWindow::exportToExcelByEcu()
 {
     if (m_dbcParser->getMessages().isEmpty()) {
         QMessageBox::warning(this, "Export", "Please load a DBC file before exporting to Excel.");
@@ -233,7 +238,7 @@ void MainWindow::exportToExcel()
     }
 
     const QString filePath = QFileDialog::getSaveFileName(this,
-        "Export to Excel", suggestedPath, "Excel Workbook (*.xlsx)");
+        "Export to Excel (by ECU)", suggestedPath, "Excel Workbook (*.xlsx)");
 
     if (filePath.isEmpty()) {
         return;
@@ -252,12 +257,57 @@ void MainWindow::exportToExcel()
                                           m_dbcParser->getMessages(),
                                           m_dbcParser->getDocumentTitle(),
                                           m_dbcParser->getChangeHistory(),
+                                          true,
                                           &errorMessage)) {
         QMessageBox::critical(this, "Export Failed", errorMessage);
         return;
     }
 
-    m_statusLabel->setText(QString("Exported Excel: %1").arg(QFileInfo(normalizedPath).fileName()));
+    m_statusLabel->setText(QString("Exported Excel (by ECU): %1").arg(QFileInfo(normalizedPath).fileName()));
+}
+
+void MainWindow::exportToExcelSingleSheet()
+{
+    if (m_dbcParser->getMessages().isEmpty()) {
+        QMessageBox::warning(this, "Export", "Please load a DBC file before exporting to Excel.");
+        return;
+    }
+
+    QString suggestedPath;
+    if (!m_currentDbcPath.isEmpty()) {
+        QFileInfo info(m_currentDbcPath);
+        suggestedPath = info.absolutePath() + "/" + info.completeBaseName() + ".xlsx";
+    } else {
+        suggestedPath = QDir::homePath() + "/dbc_export.xlsx";
+    }
+
+    const QString filePath = QFileDialog::getSaveFileName(this,
+        "Export to Excel (single sheet)", suggestedPath, "Excel Workbook (*.xlsx)");
+
+    if (filePath.isEmpty()) {
+        return;
+    }
+
+    QString normalizedPath = filePath;
+    if (!normalizedPath.endsWith(".xlsx", Qt::CaseInsensitive)) {
+        normalizedPath.append(".xlsx");
+    }
+
+    QString errorMessage;
+    if (!DbcExcelConverter::exportToExcel(normalizedPath,
+                                          m_dbcParser->getVersion(),
+                                          m_dbcParser->getBusType(),
+                                          m_dbcParser->getNodes(),
+                                          m_dbcParser->getMessages(),
+                                          m_dbcParser->getDocumentTitle(),
+                                          m_dbcParser->getChangeHistory(),
+                                          false,
+                                          &errorMessage)) {
+        QMessageBox::critical(this, "Export Failed", errorMessage);
+        return;
+    }
+
+    m_statusLabel->setText(QString("Exported Excel (single sheet): %1").arg(QFileInfo(normalizedPath).fileName()));
 }
 
 void MainWindow::exportToDbc()
