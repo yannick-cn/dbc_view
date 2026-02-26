@@ -23,7 +23,8 @@ QStringList headerLabels()
         "Msg Name\n报文名称",
         "Msg Type\n报文类型",
         "Msg ID\n报文标识符",
-        "TX/RX\n发送/接收",
+        "TX\n发送",
+        "RX\n接收",
         "Msg Send Type\n报文发送类型",
         "Msg Cycle Time (ms)\n报文周期时间",
         "Msg Length (Byte)\n报文长度",
@@ -856,13 +857,15 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writer.writeAttribute("min", QString::number(col));
         writer.writeAttribute("max", QString::number(col));
         QString w;
-        if (col <= 2 || col == 11 || col == 13 || col == 30) {
+        if (col <= 2 || col == 12 || col == 14 || col == 31) {
             w = QStringLiteral("22");
-        } else if (col >= 3 && col <= 10) {
-            w = (col <= 6) ? QStringLiteral("11") : QStringLiteral("12");
-        } else if (col ==12) {
-            w = QStringLiteral("30"); 
-        }else {
+        } else if (col >= 3 && col <= 7) {
+            w = QStringLiteral("11");
+        } else if (col >= 8 && col <= 11) {
+            w = QStringLiteral("12");
+        } else if (col == 13) {
+            w = QStringLiteral("30");
+        } else {
             w = QStringLiteral("15");
         }
         writer.writeAttribute("width", w);
@@ -874,7 +877,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeStartElement("sheetData");
 
     int currentRow = 1;
-    const int messageSegmentColCount = 11;
+    const int messageSegmentColCount = 12;
     QList<QString> dataSheetMerges;
 
     writer.writeStartElement("row");
@@ -908,13 +911,14 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writeInlineStringCell(writer, currentRow, 2, 2, msgType);
         writeInlineStringCell(writer, currentRow, 3, 2, QString("0x%1").arg(message->getId(), 0, 16).toUpper());
         writeInlineStringCell(writer, currentRow, 4, 2, message->getTransmitter());
-        writeInlineStringCell(writer, currentRow, 5, 2, message->getSendType());
-        writeNumericCell(writer, currentRow, 6, 2, message->getCycleTime());
-        writeNumericCell(writer, currentRow, 7, 2, message->getLength());
-        writeNumericCell(writer, currentRow, 8, 2, message->getCycleTimeFast());
-        writeNumericCell(writer, currentRow, 9, 2, message->getNrOfRepetitions());
-        writeNumericCell(writer, currentRow, 10, 2, message->getDelayTime());
-        writeInlineStringCell(writer, currentRow, 11, 2, message->getComment());
+        writeInlineStringCell(writer, currentRow, 5, 2, QString());
+        writeInlineStringCell(writer, currentRow, 6, 2, message->getSendType());
+        writeNumericCell(writer, currentRow, 7, 2, message->getCycleTime());
+        writeNumericCell(writer, currentRow, 8, 2, message->getLength());
+        writeNumericCell(writer, currentRow, 9, 2, message->getCycleTimeFast());
+        writeNumericCell(writer, currentRow, 10, 2, message->getNrOfRepetitions());
+        writeNumericCell(writer, currentRow, 11, 2, message->getDelayTime());
+        writeInlineStringCell(writer, currentRow, 12, 2, message->getComment());
         writer.writeEndElement();
 
         const QList<CanSignal*> messageSignals = message->getSignals();
@@ -934,26 +938,31 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
             if (currentRow == messageRow + 1) {
                 writeStyledEmptyCell(writer, currentRow, 1, 2);
             }
-            writeInlineStringCell(writer, currentRow, 12, 3, signal->getName());
-            writeInlineStringCell(writer, currentRow, 13, 3, signal->getDescription());
-            writeInlineStringCell(writer, currentRow, 14, 3, signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB");
-            writeNumericCell(writer, currentRow, 15, 3, signal->getStartBit() / 8);
-            writeNumericCell(writer, currentRow, 16, 3, signal->getStartBit() % 8);
-            writeInlineStringCell(writer, currentRow, 17, 3, signal->getSendType());
-            writeNumericCell(writer, currentRow, 18, 3, signal->getLength());
-            writeInlineStringCell(writer, currentRow, 19, 3, signal->isSigned() ? "signed" : "unsigned");
-            writeNumericCell(writer, currentRow, 20, 3, signal->getFactor());
-            writeNumericCell(writer, currentRow, 21, 3, signal->getOffset());
-            writeNumericCell(writer, currentRow, 22, 3, signal->getMin());
-            writeNumericCell(writer, currentRow, 23, 3, signal->getMax());
-            writeInlineStringCell(writer, currentRow, 24, 3, formatHex(physicalToRawMasked(signal, signal->getMin())));
-            writeInlineStringCell(writer, currentRow, 25, 3, formatHex(physicalToRawMasked(signal, signal->getMax())));
-            writeInlineStringCell(writer, currentRow, 26, 3,
+            QString rxStr = signal->getReceiversAsString();
+            if (rxStr.isEmpty() && !message->getReceivers().isEmpty()) {
+                rxStr = message->getReceivers().join(QStringLiteral(", "));
+            }
+            writeInlineStringCell(writer, currentRow, 5, 3, rxStr);
+            writeInlineStringCell(writer, currentRow, 13, 3, signal->getName());
+            writeInlineStringCell(writer, currentRow, 14, 3, signal->getDescription());
+            writeInlineStringCell(writer, currentRow, 15, 3, signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB");
+            writeNumericCell(writer, currentRow, 16, 3, signal->getStartBit() / 8);
+            writeNumericCell(writer, currentRow, 17, 3, signal->getStartBit() % 8);
+            writeInlineStringCell(writer, currentRow, 18, 3, signal->getSendType());
+            writeNumericCell(writer, currentRow, 19, 3, signal->getLength());
+            writeInlineStringCell(writer, currentRow, 20, 3, signal->isSigned() ? "signed" : "unsigned");
+            writeNumericCell(writer, currentRow, 21, 3, signal->getFactor());
+            writeNumericCell(writer, currentRow, 22, 3, signal->getOffset());
+            writeNumericCell(writer, currentRow, 23, 3, signal->getMin());
+            writeNumericCell(writer, currentRow, 24, 3, signal->getMax());
+            writeInlineStringCell(writer, currentRow, 25, 3, formatHex(physicalToRawMasked(signal, signal->getMin())));
+            writeInlineStringCell(writer, currentRow, 26, 3, formatHex(physicalToRawMasked(signal, signal->getMax())));
+            writeInlineStringCell(writer, currentRow, 27, 3,
                 formatHex(static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength())));
-            writeInlineStringCell(writer, currentRow, 27, 3, signal->getInvalidValueHex());
-            writeInlineStringCell(writer, currentRow, 28, 3, signal->getInactiveValueHex());
-            writeInlineStringCell(writer, currentRow, 29, 3, signal->getUnit());
-            writeInlineStringCell(writer, currentRow, 30, 3, formatValueTable(signal->getValueTable()));
+            writeInlineStringCell(writer, currentRow, 28, 3, signal->getInvalidValueHex());
+            writeInlineStringCell(writer, currentRow, 29, 3, signal->getInactiveValueHex());
+            writeInlineStringCell(writer, currentRow, 30, 3, signal->getUnit());
+            writeInlineStringCell(writer, currentRow, 31, 3, formatValueTable(signal->getValueTable()));
             writer.writeEndElement();
         }
 
@@ -1438,11 +1447,12 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
         return -1;
     };
 
-    // Detect new layout (TX/RX at col 4, 30 cols) vs old (Msg Send Type at col 4, 29 cols with ADC at end).
+    // Detect new layout (TX at col 4, RX at col 5, 31 cols) vs old (Msg Send Type at col 4, 29 cols with ADC at end).
     auto detectNewLayout = [](const TableMap &table, int headerRowIndex) -> bool {
         const QString col4 = table.value(headerRowIndex).value(4).trimmed();
         const QString n = normalizeHeaderCell(col4);
-        return n.contains(QLatin1String("TX/RX")) || n.contains(QStringLiteral("发送/接收"));
+        return n.contains(QLatin1String("TX/RX")) || n.contains(QStringLiteral("发送/接收"))
+            || (n.contains(QLatin1String("TX")) && n.contains(QStringLiteral("发送")));
     };
 
     TableMap singleTable;
@@ -1460,8 +1470,8 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
 
     auto processRowIntoMerge = [&](const QMap<int, QString> &row, CanMessage **currentMessage) {
         const QString messageName = row.value(1).trimmed();
-        const int msgLenCol = useNewLayout ? 7 : 6;
-        const int signalNameCol = useNewLayout ? 12 : 7;
+        const int msgLenCol = useNewLayout ? 8 : 6;
+        const int signalNameCol = useNewLayout ? 13 : 7;
         const QString msgLengthStr = row.value(msgLenCol).trimmed();
         const QString signalName = row.value(signalNameCol).trimmed();
         const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
@@ -1484,13 +1494,13 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 msg->setId(id);
                 if (useNewLayout) {
                     msg->setTransmitter(row.value(4).trimmed());
-                    msg->setSendType(normalizeSendType(row.value(5).trimmed(), false));
-                    msg->setCycleTime(row.value(6).toInt());
-                    msg->setLength(row.value(7).toInt());
-                    msg->setCycleTimeFast(row.value(8).toInt());
-                    msg->setNrOfRepetitions(row.value(9).toInt());
-                    msg->setDelayTime(row.value(10).toInt());
-                    msg->setComment(row.value(11));
+                    msg->setSendType(normalizeSendType(row.value(6).trimmed(), false));
+                    msg->setCycleTime(row.value(7).toInt());
+                    msg->setLength(row.value(8).toInt());
+                    msg->setCycleTimeFast(row.value(9).toInt());
+                    msg->setNrOfRepetitions(row.value(10).toInt());
+                    msg->setDelayTime(row.value(11).toInt());
+                    msg->setComment(row.value(12));
                 } else {
                     msg->setSendType(normalizeSendType(row.value(4).trimmed(), false));
                     msg->setCycleTime(row.value(5).toInt());
@@ -1522,25 +1532,31 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 auto *signal = new CanSignal();
                 signal->setName(signalName);
                 if (useNewLayout) {
-                    signal->setDescription(row.value(13));
-                    const QString byteOrder = row.value(14).toLower();
+                    const QString receivers = row.value(5).trimmed();
+                    const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                    signal->setReceivers(receiverList);
+                    for (const QString &receiver : receiverList) {
+                        nodeAccumulator.append(receiver);
+                    }
+                    signal->setDescription(row.value(14));
+                    const QString byteOrder = row.value(15).toLower();
                     signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
-                    signal->setStartBit(row.value(15).toInt() * 8 + row.value(16).toInt());
-                    signal->setSendType(normalizeSendType(row.value(17).trimmed(), true));
-                    signal->setLength(row.value(18).toInt());
-                    const QString dataType = row.value(19).toLower();
+                    signal->setStartBit(row.value(16).toInt() * 8 + row.value(17).toInt());
+                    signal->setSendType(normalizeSendType(row.value(18).trimmed(), true));
+                    signal->setLength(row.value(19).toInt());
+                    const QString dataType = row.value(20).toLower();
                     signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
-                    signal->setFactor(row.value(20).toDouble());
-                    signal->setOffset(row.value(21).toDouble());
-                    signal->setMin(row.value(22).toDouble());
-                    signal->setMax(row.value(23).toDouble());
-                    signal->setUnit(row.value(29).trimmed());
+                    signal->setFactor(row.value(21).toDouble());
+                    signal->setOffset(row.value(22).toDouble());
+                    signal->setMin(row.value(23).toDouble());
+                    signal->setMax(row.value(24).toDouble());
+                    signal->setUnit(row.value(30).trimmed());
                     bool initOk = false;
-                    const quint64 init = parseHexToUInt64(row.value(26), &initOk);
+                    const quint64 init = parseHexToUInt64(row.value(27), &initOk);
                     signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
-                    signal->setInvalidValueHex(row.value(27).trimmed());
-                    signal->setInactiveValueHex(row.value(28).trimmed());
-                    const QStringList valueLines = splitLines(row.value(30));
+                    signal->setInvalidValueHex(row.value(28).trimmed());
+                    signal->setInactiveValueHex(row.value(29).trimmed());
+                    const QStringList valueLines = splitLines(row.value(31));
                     if (!valueLines.isEmpty()) {
                         QMap<int, QString> valueTable;
                         for (const QString &line : valueLines) {
@@ -1593,8 +1609,9 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                     }
                 }
                 msg->addSignal(signal);
-            } else if (!useNewLayout) {
-                const QString receivers = row.value(29).trimmed();
+            } else {
+                const int rxCol = useNewLayout ? 5 : 29;
+                const QString receivers = row.value(rxCol).trimmed();
                 const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
                 QStringList merged = existingSignal->getReceivers();
                 for (const QString &r : receiverList) {
