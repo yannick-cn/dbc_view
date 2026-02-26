@@ -12,7 +12,7 @@ fi
 echo "✓ Executable found"
 
 # Check if DBC file exists
-if [ ! -f "ADC321_CAN_ADASTORADAR_2025_08_25_V0.0.2.dbc" ]; then
+if [ ! -f "C5_SDR_Private_CANFD_V1.4.00_20240528.dbc" ]; then
     echo "Error: DBC file not found!"
     exit 1
 fi
@@ -38,5 +38,5 @@ echo "  ./run_dbc_viewer.sh"
 echo ""
 echo "To load the DBC file:"
 echo "  1. Click 'File' -> 'Open DBC File...'"
-echo "  2. Select 'ADC321_CAN_ADASTORADAR_2025_08_25_V0.0.2.dbc'"
+echo "  2. Select 'C5_SDR_Private_CANFD_V1.4.00_20240528.dbc'"
 echo "  3. Explore the CAN messages and signals in the interface"

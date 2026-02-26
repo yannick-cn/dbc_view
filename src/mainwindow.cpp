@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "signallayoutwidget.h"
+#include "dbcvalidator.h"
 #include <QApplication>
 #include <QDir>
 #include <QFileInfo>
@@ -208,6 +209,7 @@ void MainWindow::openFile()
         m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
         populateMessageTree();
         clearViews();
+        showValidationErrorsIfAny();
     } else {
         loadDbcFile(fileName);
     }
@@ -307,9 +309,10 @@ void MainWindow::loadDbcFile(const QString &filePath)
         m_currentDbcPath = filePath;
         m_fileLabel->setText(QString("File: %1").arg(QFileInfo(filePath).fileName()));
         m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
-        
+
         populateMessageTree();
         clearViews();
+        showValidationErrorsIfAny();
     } else {
         QMessageBox::critical(this, "Error", "Failed to parse DBC file!");
         m_statusLabel->setText("Error loading file");
@@ -528,6 +531,20 @@ void MainWindow::clearViews()
     m_currentSignal = nullptr;
 }
 
+void MainWindow::showValidationErrorsIfAny()
+{
+    const ValidationResult result = validateMessages(m_dbcParser->getMessages());
+    if (!result.ok && !result.errors.isEmpty()) {
+        QMessageBox msgBox(this);
+        msgBox.setWindowTitle(tr("导入数据校验"));
+        msgBox.setIcon(QMessageBox::Warning);
+        msgBox.setText(tr("导入数据存在以下问题："));
+        msgBox.setDetailedText(result.errors.join(QStringLiteral("\n")));
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.exec();
+    }
+}
+
 void MainWindow::showAbout()
 {
     QMessageBox::about(this, "About DBC Viewer",
@@ -585,6 +602,7 @@ void MainWindow::dropEvent(QDropEvent *event)
                 m_statusLabel->setText(QString("Loaded %1 messages").arg(m_dbcParser->getMessages().size()));
                 populateMessageTree();
                 clearViews();
+                showValidationErrorsIfAny();
                 event->acceptProposedAction();
                 return;
             }

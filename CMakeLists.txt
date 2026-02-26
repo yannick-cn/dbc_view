@@ -18,6 +18,7 @@ set(SOURCES
     src/mainwindow.cpp
     src/signallayoutwidget.cpp
     src/dbcparser.cpp
+    src/dbcvalidator.cpp
     src/canmessage.cpp
     src/cansignal.cpp
     src/dbcexcelconverter.cpp
@@ -33,6 +34,7 @@ set(HEADERS
     src/mainwindow.h
     src/signallayoutwidget.h
     src/dbcparser.h
+    src/dbcvalidator.h
     src/cansignal.h
     src/canmessage.h
     src/dbcexcelconverter.h

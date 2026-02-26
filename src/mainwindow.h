@@ -54,6 +54,7 @@ private:
     void populateSignalTable(CanMessage *message);
     void populateSignalDetails(CanSignal *signal);
     void clearViews();
+    void showValidationErrorsIfAny();
     
     // UI Components
     QWidget *m_centralWidget;
