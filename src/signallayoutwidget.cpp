@@ -4,6 +4,11 @@
 #include <QHeaderView>
 #include <QVBoxLayout>
 #include <QColor>
+#include <QToolTip>
+#include <QMouseEvent>
+#include <QEvent>
+#include <QApplication>
+#include <QCursor>
 
 namespace {
 
@@ -46,6 +51,9 @@ SignalLayoutWidget::SignalLayoutWidget(QWidget *parent)
     m_table->horizontalHeader()->setStretchLastSection(false);
     m_table->setEditTriggers(QAbstractItemView::NoEditTriggers);
     m_table->setSelectionMode(QAbstractItemView::NoSelection);
+    m_table->setMouseTracking(true);
+    m_table->viewport()->setMouseTracking(true);
+    m_table->viewport()->installEventFilter(this);
 }
 
 int SignalLayoutWidget::cellToBit(int row, int col)
@@ -57,6 +65,29 @@ void SignalLayoutWidget::bitToCell(int bit, int *row, int *col)
 {
     if (row) *row = bit / 8;
     if (col) *col = bit % 8;
+}
+
+bool SignalLayoutWidget::eventFilter(QObject *watched, QEvent *event)
+{
+    if (watched != m_table->viewport()) {
+        return QWidget::eventFilter(watched, event);
+    }
+    if (event->type() == QEvent::MouseMove) {
+        QPoint pos = static_cast<QMouseEvent *>(event)->pos();
+        QTableWidgetItem *item = m_table->itemAt(pos);
+        QString tip = item ? item->data(Qt::UserRole).toString() : QString();
+        if (tip.isEmpty()) {
+            QToolTip::hideText();
+            QToolTip::showText(QPoint(-10000, -10000), QString(), m_table);
+        } else {
+            QPoint globalPos = m_table->viewport()->mapToGlobal(pos);
+            QToolTip::showText(globalPos + QPoint(12, 20), tip, m_table);
+        }
+    } else if (event->type() == QEvent::Leave) {
+        QToolTip::hideText();
+        QToolTip::showText(QPoint(-10000, -10000), QString(), m_table);
+    }
+    return QWidget::eventFilter(watched, event);
 }
 
 QColor SignalLayoutWidget::colorForSignal(int signalIndex) const
@@ -168,9 +199,8 @@ void SignalLayoutWidget::buildLayout()
             QTableWidgetItem *item = new QTableWidgetItem(cellText);
             item->setTextAlignment(Qt::AlignCenter);
             item->setFlags(item->flags() & ~Qt::ItemIsEditable);
-            if (!tooltip.isEmpty()) {
-                item->setToolTip(tooltip);
-            }
+            item->setData(Qt::UserRole, tooltip);
+            item->setToolTip(QString());
             m_table->setItem(row, col, item);
 
             if (sigIndex >= 0) {

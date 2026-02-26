@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QTableWidget>
+#include <QObject>
 
 class CanMessage;
 class CanSignal;
@@ -23,6 +24,9 @@ public:
     void setMessage(CanMessage *message);
     /** Optionally highlight a specific signal (e.g. when selected). */
     void setHighlightedSignal(CanSignal *signal);
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
     void buildLayout();
