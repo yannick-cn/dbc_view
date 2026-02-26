@@ -33,7 +33,7 @@ NS_ :
 
 BS_:
 
-BU_: ADAS FLSDR GW FDR FRSDR RLSDR RRSDR Tester
+BU_: FLSDR ADAS GW FDR FRSDR RLSDR RRSDR Tester
 
 
 BO_ 821 ADAS_FrP22_335: 8 ADAS
@@ -53,17 +53,17 @@ BO_ 1187 FLSDR_NM_4A3: 8 FLSDR
  SG_ FLSDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FDR,FRSDR,GW,RLSDR,RRSDR
  SG_ FLSDR_RptMsgReq : 8|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
  SG_ FLSDR_ActvWkUp : 12|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
- SG_ FLSDR_RptFromSleep : 16|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ FLSDR_RptFromPrep : 17|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ FLSDR_NormFromRpt : 18|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ FLSDR_NormFromRdySleep : 19|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ FLSDR_RptFromRdySleep : 20|1@0+ (1,0) [0|1] "" Vector__XXX
- SG_ FLSDR_RptFromNormal : 21|1@0+ (1,0) [0|1] "" Vector__XXX
+ SG_ FLSDR_RptFromSleep : 16|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_RptFromPrep : 17|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_NormFromRpt : 18|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_NormFromRdySleep : 19|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_RptFromRdySleep : 20|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
+ SG_ FLSDR_RptFromNormal : 21|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
  SG_ FLSDR_NormOperSt : 22|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
  SG_ FLSDR_RptMsgSt : 23|1@0+ (1,0) [0|1] "" FDR,FRSDR,GW,RLSDR,RRSDR
 
 BO_ 1482 FLSDR_FrP02_5CA: 8 FLSDR
- SG_ FLSDR_ECUVer : 7|16@0+ (1,0) [0|65535] "" Vector__XXX
+ SG_ FLSDR_ECUVer : 7|16@0+ (1,0) [0|65535] "" FLSDR
 
 BO_ 1730 Diag_DTCInfo_FLSDR: 8 FLSDR
  SG_ Diag_DTCInfo_FLSDR : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" GW,Tester
@@ -180,6 +180,29 @@ BO_ 860 TBox_FrP06_35C: 8 GW
 
 BO_ 1285 VTM_FrP01_505: 8 GW
  SG_ VTM_TralrSts : 23|1@0+ (1,0) [0|1] "" FLSDR
+BO_TX_BU_ 821 : FLSDR;
+BO_TX_BU_ 812 : ADAS,GW;
+BO_TX_BU_ 1186 : FLSDR;
+BO_TX_BU_ 1187 : FDR,FRSDR,GW,RLSDR,RRSDR;
+BO_TX_BU_ 1730 : GW,Tester;
+BO_TX_BU_ 1850 : GW,Tester;
+BO_TX_BU_ 1188 : FLSDR;
+BO_TX_BU_ 170 : FLSDR;
+BO_TX_BU_ 802 : FLSDR;
+BO_TX_BU_ 848 : FLSDR;
+BO_TX_BU_ 850 : FLSDR;
+BO_TX_BU_ 851 : FLSDR;
+BO_TX_BU_ 1152 : FLSDR;
+BO_TX_BU_ 1466 : FLSDR;
+BO_TX_BU_ 1467 : FLSDR;
+BO_TX_BU_ 1468 : FLSDR;
+BO_TX_BU_ 1472 : FLSDR;
+BO_TX_BU_ 1842 : FLSDR;
+BO_TX_BU_ 2015 : FLSDR;
+BO_TX_BU_ 1189 : FLSDR;
+BO_TX_BU_ 1190 : FLSDR;
+BO_TX_BU_ 860 : FLSDR;
+BO_TX_BU_ 1285 : FLSDR;
 
 CM_ BO_ 821 "高阶ADAS发送";
 CM_ SG_ 821 ADAS_Plt_Cfg_FCTASetResp "（高阶）前方侧向来车预警开关反馈";
@@ -328,8 +351,8 @@ BA_ "DBName" "ADCANFD";
 BA_ "Baudrate" 500000;
 BA_ "NmType" "AUTOSAR";
 BA_ "NmMessageCount" 255;
-BA_ "NodeLayerModules" BU_ ADAS "CANoeILNLVector.dll";
 BA_ "NodeLayerModules" BU_ FLSDR "CANoeILNLVector.dll";
+BA_ "NodeLayerModules" BU_ ADAS "CANoeILNLVector.dll";
 BA_ "NodeLayerModules" BU_ GW "CANoeILNLVector.dll";
 BA_ "NodeLayerModules" BU_ FDR "CANoeILNLVector.dll";
 BA_ "NodeLayerModules" BU_ FRSDR "CANoeILNLVector.dll";

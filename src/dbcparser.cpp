@@ -84,6 +84,23 @@ bool DbcParser::parseFile(const QString &filePath)
             qWarning() << "Failed to parse line:" << line;
         }
     }
+    for (CanMessage *message : m_messages) {
+        if (!message || !message->getReceivers().isEmpty()) {
+            continue;
+        }
+        QStringList merged;
+        for (const CanSignal *sig : message->getSignals()) {
+            if (!sig) continue;
+            for (const QString &r : sig->getReceivers()) {
+                if (!merged.contains(r)) {
+                    merged.append(r);
+                }
+            }
+        }
+        if (!merged.isEmpty()) {
+            message->setReceivers(merged);
+        }
+    }
     return true;
 }
 

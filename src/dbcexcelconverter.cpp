@@ -911,7 +911,13 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writeInlineStringCell(writer, currentRow, 2, 2, msgType);
         writeInlineStringCell(writer, currentRow, 3, 2, QString("0x%1").arg(message->getId(), 0, 16).toUpper());
         writeInlineStringCell(writer, currentRow, 4, 2, message->getTransmitter());
-        writeInlineStringCell(writer, currentRow, 5, 2, QString());
+        QStringList rxForExport;
+        for (const QString &r : message->getReceivers()) {
+            if (r.compare(QStringLiteral("Vector__XXX"), Qt::CaseInsensitive) != 0) {
+                rxForExport.append(r);
+            }
+        }
+        writeInlineStringCell(writer, currentRow, 5, 2, rxForExport.join(QStringLiteral(", ")));
         writeInlineStringCell(writer, currentRow, 6, 2, message->getSendType());
         writeNumericCell(writer, currentRow, 7, 2, message->getCycleTime());
         writeNumericCell(writer, currentRow, 8, 2, message->getLength());
@@ -938,11 +944,6 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
             if (currentRow == messageRow + 1) {
                 writeStyledEmptyCell(writer, currentRow, 1, 2);
             }
-            QString rxStr = signal->getReceiversAsString();
-            if (rxStr.isEmpty() && !message->getReceivers().isEmpty()) {
-                rxStr = message->getReceivers().join(QStringLiteral(", "));
-            }
-            writeInlineStringCell(writer, currentRow, 5, 3, rxStr);
             writeInlineStringCell(writer, currentRow, 13, 3, signal->getName());
             writeInlineStringCell(writer, currentRow, 14, 3, signal->getDescription());
             writeInlineStringCell(writer, currentRow, 15, 3, signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB");
@@ -1494,6 +1495,12 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 msg->setId(id);
                 if (useNewLayout) {
                     msg->setTransmitter(row.value(4).trimmed());
+                    const QString rxStr = row.value(5).trimmed();
+                    const QStringList rxList = rxStr.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                    msg->setReceivers(rxList);
+                    for (const QString &r : rxList) {
+                        nodeAccumulator.append(r);
+                    }
                     msg->setSendType(normalizeSendType(row.value(6).trimmed(), false));
                     msg->setCycleTime(row.value(7).toInt());
                     msg->setLength(row.value(8).toInt());
@@ -1521,6 +1528,22 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 if (!tx.isEmpty()) {
                     msg->setTransmitter(tx);
                 }
+                if (useNewLayout) {
+                    const QString rxStr = row.value(5).trimmed();
+                    const QStringList rxList = rxStr.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                    if (!rxList.isEmpty()) {
+                        QStringList merged = msg->getReceivers();
+                        for (const QString &r : rxList) {
+                            if (!merged.contains(r)) {
+                                merged.append(r);
+                            }
+                        }
+                        msg->setReceivers(merged);
+                        for (const QString &r : rxList) {
+                            nodeAccumulator.append(r);
+                        }
+                    }
+                }
             }
             *currentMessage = msg;
             return;
@@ -1532,12 +1555,7 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 auto *signal = new CanSignal();
                 signal->setName(signalName);
                 if (useNewLayout) {
-                    const QString receivers = row.value(5).trimmed();
-                    const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
-                    signal->setReceivers(receiverList);
-                    for (const QString &receiver : receiverList) {
-                        nodeAccumulator.append(receiver);
-                    }
+                    signal->setReceivers(msg->getReceivers());
                     signal->setDescription(row.value(14));
                     const QString byteOrder = row.value(15).toLower();
                     signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
@@ -1610,18 +1628,19 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 }
                 msg->addSignal(signal);
             } else {
-                const int rxCol = useNewLayout ? 5 : 29;
-                const QString receivers = row.value(rxCol).trimmed();
-                const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
-                QStringList merged = existingSignal->getReceivers();
-                for (const QString &r : receiverList) {
-                    if (!merged.contains(r)) {
-                        merged.append(r);
+                if (!useNewLayout) {
+                    const QString receivers = row.value(29).trimmed();
+                    const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                    QStringList merged = existingSignal->getReceivers();
+                    for (const QString &r : receiverList) {
+                        if (!merged.contains(r)) {
+                            merged.append(r);
+                        }
                     }
-                }
-                existingSignal->setReceivers(merged);
-                for (const QString &receiver : receiverList) {
-                    nodeAccumulator.append(receiver);
+                    existingSignal->setReceivers(merged);
+                    for (const QString &receiver : receiverList) {
+                        nodeAccumulator.append(receiver);
+                    }
                 }
             }
         }
