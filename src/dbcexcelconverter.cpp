@@ -838,7 +838,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeAttribute("showGridLines", "1");
     writer.writeAttribute("zoomScale", "70");
     writer.writeStartElement("pane");
-    writer.writeAttribute("xSplit", "11");
+    writer.writeAttribute("xSplit", "12");
     writer.writeAttribute("ySplit", "1");
     writer.writeAttribute("topLeftCell", "G2");
     writer.writeAttribute("activePane", "bottomRight");
