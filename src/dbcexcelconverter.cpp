@@ -23,9 +23,14 @@ QStringList headerLabels()
         "Msg Name\n报文名称",
         "Msg Type\n报文类型",
         "Msg ID\n报文标识符",
+        "TX/RX\n发送/接收",
         "Msg Send Type\n报文发送类型",
         "Msg Cycle Time (ms)\n报文周期时间",
         "Msg Length (Byte)\n报文长度",
+        "Msg Cycle Time Fast(ms)\n报文发送的快速周期(ms)",
+        "Msg Nr. Of Repetition\n报文快速发送的次数",
+        "Msg Delay Time(ms)\n报文延时时间",
+        "Msg Comment\n报文注释",
         "Signal Name\n信号名称",
         "Signal Description\n信号描述",
         "Byte Order\n排列格式(Intel/Motorola)",
@@ -44,11 +49,7 @@ QStringList headerLabels()
         "Invalid Value (Hex)\n无效值",
         "Inactive Value (Hex)\n非使能值",
         "Unit\n单位",
-        "Signal Value Description\n信号值描述",
-        "Msg Cycle Time Fast(ms)\n报文发送的快速周期(ms)",
-        "Msg Nr. Of Repetition\n报文快速发送的次数",
-        "Msg Delay Time(ms)\n报文延时时间",
-        "ADC"
+        "Signal Value Description\n信号值描述"
     };
 }
 
@@ -836,7 +837,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeAttribute("showGridLines", "1");
     writer.writeAttribute("zoomScale", "70");
     writer.writeStartElement("pane");
-    writer.writeAttribute("xSplit", "6");
+    writer.writeAttribute("xSplit", "11");
     writer.writeAttribute("ySplit", "1");
     writer.writeAttribute("topLeftCell", "G2");
     writer.writeAttribute("activePane", "bottomRight");
@@ -854,7 +855,17 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writer.writeStartElement("col");
         writer.writeAttribute("min", QString::number(col));
         writer.writeAttribute("max", QString::number(col));
-        writer.writeAttribute("width", col <= 6 ? "22" : "24");
+        QString w;
+        if (col <= 2 || col == 11 || col == 13 || col == 30) {
+            w = QStringLiteral("22");
+        } else if (col >= 3 && col <= 10) {
+            w = (col <= 6) ? QStringLiteral("11") : QStringLiteral("12");
+        } else if (col ==12) {
+            w = QStringLiteral("30"); 
+        }else {
+            w = QStringLiteral("15");
+        }
+        writer.writeAttribute("width", w);
         writer.writeAttribute("customWidth", "1");
         writer.writeEndElement();
     }
@@ -863,7 +874,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeStartElement("sheetData");
 
     int currentRow = 1;
-    const int messageSegmentColCount = 6;
+    const int messageSegmentColCount = 11;
     QList<QString> dataSheetMerges;
 
     writer.writeStartElement("row");
@@ -896,14 +907,14 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         }
         writeInlineStringCell(writer, currentRow, 2, 2, msgType);
         writeInlineStringCell(writer, currentRow, 3, 2, QString("0x%1").arg(message->getId(), 0, 16).toUpper());
-        writeInlineStringCell(writer, currentRow, 4, 2, message->getSendType());
-        writeNumericCell(writer, currentRow, 5, 2, message->getCycleTime());
-        writeNumericCell(writer, currentRow, 6, 2, message->getLength());
-        writeInlineStringCell(writer, currentRow, 8, 2, message->getComment());
-        writeNumericCell(writer, currentRow, 26, 2, message->getCycleTimeFast());
-        writeNumericCell(writer, currentRow, 27, 2, message->getNrOfRepetitions());
-        writeNumericCell(writer, currentRow, 28, 2, message->getDelayTime());
-        writeInlineStringCell(writer, currentRow, 29, 2, message->getTransmitter());
+        writeInlineStringCell(writer, currentRow, 4, 2, message->getTransmitter());
+        writeInlineStringCell(writer, currentRow, 5, 2, message->getSendType());
+        writeNumericCell(writer, currentRow, 6, 2, message->getCycleTime());
+        writeNumericCell(writer, currentRow, 7, 2, message->getLength());
+        writeNumericCell(writer, currentRow, 8, 2, message->getCycleTimeFast());
+        writeNumericCell(writer, currentRow, 9, 2, message->getNrOfRepetitions());
+        writeNumericCell(writer, currentRow, 10, 2, message->getDelayTime());
+        writeInlineStringCell(writer, currentRow, 11, 2, message->getComment());
         writer.writeEndElement();
 
         const QList<CanSignal*> messageSignals = message->getSignals();
@@ -923,27 +934,26 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
             if (currentRow == messageRow + 1) {
                 writeStyledEmptyCell(writer, currentRow, 1, 2);
             }
-            writeInlineStringCell(writer, currentRow, 7, 3, signal->getName());
-            writeInlineStringCell(writer, currentRow, 8, 3, signal->getDescription());
-            writeInlineStringCell(writer, currentRow, 9, 3, signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB");
-            writeNumericCell(writer, currentRow, 10, 3, signal->getStartBit() / 8);
-            writeNumericCell(writer, currentRow, 11, 3, signal->getStartBit() % 8);
-            writeInlineStringCell(writer, currentRow, 12, 3, signal->getSendType());
-            writeNumericCell(writer, currentRow, 13, 3, signal->getLength());
-            writeInlineStringCell(writer, currentRow, 14, 3, signal->isSigned() ? "signed" : "unsigned");
-            writeNumericCell(writer, currentRow, 15, 3, signal->getFactor());
-            writeNumericCell(writer, currentRow, 16, 3, signal->getOffset());
-            writeNumericCell(writer, currentRow, 17, 3, signal->getMin());
-            writeNumericCell(writer, currentRow, 18, 3, signal->getMax());
-            writeInlineStringCell(writer, currentRow, 19, 3, formatHex(physicalToRawMasked(signal, signal->getMin())));
-            writeInlineStringCell(writer, currentRow, 20, 3, formatHex(physicalToRawMasked(signal, signal->getMax())));
-            writeInlineStringCell(writer, currentRow, 21, 3,
+            writeInlineStringCell(writer, currentRow, 12, 3, signal->getName());
+            writeInlineStringCell(writer, currentRow, 13, 3, signal->getDescription());
+            writeInlineStringCell(writer, currentRow, 14, 3, signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB");
+            writeNumericCell(writer, currentRow, 15, 3, signal->getStartBit() / 8);
+            writeNumericCell(writer, currentRow, 16, 3, signal->getStartBit() % 8);
+            writeInlineStringCell(writer, currentRow, 17, 3, signal->getSendType());
+            writeNumericCell(writer, currentRow, 18, 3, signal->getLength());
+            writeInlineStringCell(writer, currentRow, 19, 3, signal->isSigned() ? "signed" : "unsigned");
+            writeNumericCell(writer, currentRow, 20, 3, signal->getFactor());
+            writeNumericCell(writer, currentRow, 21, 3, signal->getOffset());
+            writeNumericCell(writer, currentRow, 22, 3, signal->getMin());
+            writeNumericCell(writer, currentRow, 23, 3, signal->getMax());
+            writeInlineStringCell(writer, currentRow, 24, 3, formatHex(physicalToRawMasked(signal, signal->getMin())));
+            writeInlineStringCell(writer, currentRow, 25, 3, formatHex(physicalToRawMasked(signal, signal->getMax())));
+            writeInlineStringCell(writer, currentRow, 26, 3,
                 formatHex(static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength())));
-            writeInlineStringCell(writer, currentRow, 22, 3, signal->getInvalidValueHex());
-            writeInlineStringCell(writer, currentRow, 23, 3, signal->getInactiveValueHex());
-            writeInlineStringCell(writer, currentRow, 24, 3, signal->getUnit());
-            writeInlineStringCell(writer, currentRow, 25, 3, formatValueTable(signal->getValueTable()));
-            writeInlineStringCell(writer, currentRow, 29, 3, signal->getReceiversAsString());
+            writeInlineStringCell(writer, currentRow, 27, 3, signal->getInvalidValueHex());
+            writeInlineStringCell(writer, currentRow, 28, 3, signal->getInactiveValueHex());
+            writeInlineStringCell(writer, currentRow, 29, 3, signal->getUnit());
+            writeInlineStringCell(writer, currentRow, 30, 3, formatValueTable(signal->getValueTable()));
             writer.writeEndElement();
         }
 
@@ -1428,6 +1438,13 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
         return -1;
     };
 
+    // Detect new layout (TX/RX at col 4, 30 cols) vs old (Msg Send Type at col 4, 29 cols with ADC at end).
+    auto detectNewLayout = [](const TableMap &table, int headerRowIndex) -> bool {
+        const QString col4 = table.value(headerRowIndex).value(4).trimmed();
+        const QString n = normalizeHeaderCell(col4);
+        return n.contains(QLatin1String("TX/RX")) || n.contains(QStringLiteral("发送/接收"));
+    };
+
     TableMap singleTable;
     if (dataSheetXmls.isEmpty()) {
         singleTable = hasSheet2 ? parseWorksheetToTable(sheet2Xml, sharedStrings) : parseWorksheetToTable(sheet1Xml, sharedStrings);
@@ -1439,12 +1456,14 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
     QMap<quint32, CanMessage*> byId;
     QList<CanMessage*> resultOrder;
     QStringList nodeAccumulator;
+    bool useNewLayout = true;
 
-    auto processRowIntoMerge = [&](const QMap<int, QString> &row, int headerRowIndex,
-                                   CanMessage **currentMessage) {
+    auto processRowIntoMerge = [&](const QMap<int, QString> &row, CanMessage **currentMessage) {
         const QString messageName = row.value(1).trimmed();
-        const QString signalName = row.value(7).trimmed();
-        const QString msgLengthStr = row.value(6).trimmed();
+        const int msgLenCol = useNewLayout ? 7 : 6;
+        const int signalNameCol = useNewLayout ? 12 : 7;
+        const QString msgLengthStr = row.value(msgLenCol).trimmed();
+        const QString signalName = row.value(signalNameCol).trimmed();
         const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
         if (isMessageRow) {
             const QString idText = row.value(3).trimmed();
@@ -1463,21 +1482,32 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 msg->setMessageType(msgType);
                 msg->setFrameFormat(frameFormat);
                 msg->setId(id);
-                msg->setSendType(normalizeSendType(row.value(4).trimmed(), false));
-                msg->setCycleTime(row.value(5).toInt());
-                msg->setLength(row.value(6).toInt());
-                msg->setComment(row.value(8));
-                msg->setCycleTimeFast(row.value(26).toInt());
-                msg->setNrOfRepetitions(row.value(27).toInt());
-                msg->setDelayTime(row.value(28).toInt());
-                msg->setTransmitter(row.value(29).trimmed());
+                if (useNewLayout) {
+                    msg->setTransmitter(row.value(4).trimmed());
+                    msg->setSendType(normalizeSendType(row.value(5).trimmed(), false));
+                    msg->setCycleTime(row.value(6).toInt());
+                    msg->setLength(row.value(7).toInt());
+                    msg->setCycleTimeFast(row.value(8).toInt());
+                    msg->setNrOfRepetitions(row.value(9).toInt());
+                    msg->setDelayTime(row.value(10).toInt());
+                    msg->setComment(row.value(11));
+                } else {
+                    msg->setSendType(normalizeSendType(row.value(4).trimmed(), false));
+                    msg->setCycleTime(row.value(5).toInt());
+                    msg->setLength(row.value(6).toInt());
+                    msg->setComment(row.value(8));
+                    msg->setCycleTimeFast(row.value(26).toInt());
+                    msg->setNrOfRepetitions(row.value(27).toInt());
+                    msg->setDelayTime(row.value(28).toInt());
+                    msg->setTransmitter(row.value(29).trimmed());
+                }
                 byId[id] = msg;
                 resultOrder.append(msg);
                 if (!msg->getTransmitter().isEmpty()) {
                     nodeAccumulator.append(msg->getTransmitter());
                 }
             } else {
-                const QString tx = row.value(29).trimmed();
+                const QString tx = useNewLayout ? row.value(4).trimmed() : row.value(29).trimmed();
                 if (!tx.isEmpty()) {
                     msg->setTransmitter(tx);
                 }
@@ -1491,47 +1521,79 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
             if (!existingSignal) {
                 auto *signal = new CanSignal();
                 signal->setName(signalName);
-                signal->setDescription(row.value(8));
-                const QString byteOrder = row.value(9).toLower();
-                signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
-                const int startByte = row.value(10).toInt();
-                const int startBit = row.value(11).toInt();
-                signal->setStartBit(startByte * 8 + startBit);
-                signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
-                signal->setLength(row.value(13).toInt());
-                const QString dataType = row.value(14).toLower();
-                signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
-                signal->setFactor(row.value(15).toDouble());
-                signal->setOffset(row.value(16).toDouble());
-                signal->setMin(row.value(17).toDouble());
-                signal->setMax(row.value(18).toDouble());
-                signal->setUnit(row.value(24).trimmed());
-                bool initOk = false;
-                const quint64 init = parseHexToUInt64(row.value(21), &initOk);
-                signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
-                signal->setInvalidValueHex(row.value(22).trimmed());
-                signal->setInactiveValueHex(row.value(23).trimmed());
-                const QString receivers = row.value(29).trimmed();
-                const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
-                signal->setReceivers(receiverList);
-                for (const QString &receiver : receiverList) {
-                    nodeAccumulator.append(receiver);
-                }
-                const QStringList valueLines = splitLines(row.value(25));
-                if (!valueLines.isEmpty()) {
-                    QMap<int, QString> valueTable;
-                    for (const QString &line : valueLines) {
-                        const int colonIndex = line.indexOf(':');
-                        if (colonIndex <= 0) continue;
-                        bool valueOk = false;
-                        const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
-                        if (!valueOk) continue;
-                        valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
+                if (useNewLayout) {
+                    signal->setDescription(row.value(13));
+                    const QString byteOrder = row.value(14).toLower();
+                    signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
+                    signal->setStartBit(row.value(15).toInt() * 8 + row.value(16).toInt());
+                    signal->setSendType(normalizeSendType(row.value(17).trimmed(), true));
+                    signal->setLength(row.value(18).toInt());
+                    const QString dataType = row.value(19).toLower();
+                    signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
+                    signal->setFactor(row.value(20).toDouble());
+                    signal->setOffset(row.value(21).toDouble());
+                    signal->setMin(row.value(22).toDouble());
+                    signal->setMax(row.value(23).toDouble());
+                    signal->setUnit(row.value(29).trimmed());
+                    bool initOk = false;
+                    const quint64 init = parseHexToUInt64(row.value(26), &initOk);
+                    signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
+                    signal->setInvalidValueHex(row.value(27).trimmed());
+                    signal->setInactiveValueHex(row.value(28).trimmed());
+                    const QStringList valueLines = splitLines(row.value(30));
+                    if (!valueLines.isEmpty()) {
+                        QMap<int, QString> valueTable;
+                        for (const QString &line : valueLines) {
+                            const int colonIndex = line.indexOf(':');
+                            if (colonIndex <= 0) continue;
+                            bool valueOk = false;
+                            const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
+                            if (!valueOk) continue;
+                            valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
+                        }
+                        signal->setValueTable(valueTable);
                     }
-                    signal->setValueTable(valueTable);
+                } else {
+                    signal->setDescription(row.value(8));
+                    const QString byteOrder = row.value(9).toLower();
+                    signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
+                    signal->setStartBit(row.value(10).toInt() * 8 + row.value(11).toInt());
+                    signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
+                    signal->setLength(row.value(13).toInt());
+                    const QString dataType = row.value(14).toLower();
+                    signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
+                    signal->setFactor(row.value(15).toDouble());
+                    signal->setOffset(row.value(16).toDouble());
+                    signal->setMin(row.value(17).toDouble());
+                    signal->setMax(row.value(18).toDouble());
+                    signal->setUnit(row.value(24).trimmed());
+                    bool initOk = false;
+                    const quint64 initOld = parseHexToUInt64(row.value(21), &initOk);
+                    signal->setInitialValue(initOk ? static_cast<double>(initOld) : 0.0);
+                    signal->setInvalidValueHex(row.value(22).trimmed());
+                    signal->setInactiveValueHex(row.value(23).trimmed());
+                    const QString receivers = row.value(29).trimmed();
+                    const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
+                    signal->setReceivers(receiverList);
+                    for (const QString &receiver : receiverList) {
+                        nodeAccumulator.append(receiver);
+                    }
+                    const QStringList valueLines = splitLines(row.value(25));
+                    if (!valueLines.isEmpty()) {
+                        QMap<int, QString> valueTable;
+                        for (const QString &line : valueLines) {
+                            const int colonIndex = line.indexOf(':');
+                            if (colonIndex <= 0) continue;
+                            bool valueOk = false;
+                            const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
+                            if (!valueOk) continue;
+                            valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
+                        }
+                        signal->setValueTable(valueTable);
+                    }
                 }
                 msg->addSignal(signal);
-            } else {
+            } else if (!useNewLayout) {
                 const QString receivers = row.value(29).trimmed();
                 const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
                 QStringList merged = existingSignal->getReceivers();
@@ -1560,22 +1622,25 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                     }
                     return false;
                 }
+                useNewLayout = detectNewLayout(table, headerRowIndex);
                 const QMap<int, QString> headerRow = table.value(headerRowIndex);
-                for (int col = 1; col <= columnCount; ++col) {
-                    const QString value = normalizeHeaderCell(headerRow.value(col));
-                    const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
-                    if (value != expected) {
-                        if (error) {
-                            *error = QString("Unexpected header in column %1: %2").arg(col).arg(headerRow.value(col).trimmed());
+                if (useNewLayout) {
+                    for (int col = 1; col <= columnCount; ++col) {
+                        const QString value = normalizeHeaderCell(headerRow.value(col));
+                        const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
+                        if (value != expected) {
+                            if (error) {
+                                *error = QString("Unexpected header in column %1: %2").arg(col).arg(headerRow.value(col).trimmed());
+                            }
+                            return false;
                         }
-                        return false;
                     }
                 }
             }
             CanMessage *currentMessage = nullptr;
             for (auto it = table.begin(); it != table.end(); ++it) {
                 if (it.key() == headerRowIndex) continue;
-                processRowIntoMerge(it.value(), headerRowIndex, &currentMessage);
+                processRowIntoMerge(it.value(), &currentMessage);
             }
         }
         result.messages = resultOrder;
@@ -1589,94 +1654,26 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
             }
             return false;
         }
+        useNewLayout = detectNewLayout(singleTable, headerRowIndex);
         const QMap<int, QString> headerRow = singleTable.value(headerRowIndex);
-        for (int col = 1; col <= columnCount; ++col) {
-            const QString value = normalizeHeaderCell(headerRow.value(col));
-            const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
-            if (value != expected) {
-                if (error) {
-                    *error = QString("Unexpected header in column %1: %2").arg(col).arg(headerRow.value(col).trimmed());
+        if (useNewLayout) {
+            for (int col = 1; col <= columnCount; ++col) {
+                const QString value = normalizeHeaderCell(headerRow.value(col));
+                const QString expected = normalizeHeaderCell(expectedHeaders.at(col - 1));
+                if (value != expected) {
+                    if (error) {
+                        *error = QString("Unexpected header in column %1: %2").arg(col).arg(headerRow.value(col).trimmed());
+                    }
+                    return false;
                 }
-                return false;
             }
         }
         CanMessage *currentMessage = nullptr;
         for (auto it = singleTable.begin(); it != singleTable.end(); ++it) {
             if (it.key() == headerRowIndex) continue;
-            const QMap<int, QString> row = it.value();
-            const QString messageName = row.value(1).trimmed();
-            const QString signalName = row.value(7).trimmed();
-            const QString msgLengthStr = row.value(6).trimmed();
-            const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
-            if (isMessageRow) {
-                currentMessage = new CanMessage();
-                currentMessage->setName(messageName);
-                QString msgType = row.value(2).trimmed();
-                QString frameFormat = msgType;
-                normalizeMessageTypeFromExcel(&msgType, &frameFormat);
-                currentMessage->setMessageType(msgType);
-                currentMessage->setFrameFormat(frameFormat);
-                bool idOk = false;
-                currentMessage->setId(static_cast<quint32>(parseHexToUInt64(row.value(3).trimmed(), &idOk)));
-                currentMessage->setSendType(normalizeSendType(row.value(4).trimmed(), false));
-                currentMessage->setCycleTime(row.value(5).toInt());
-                currentMessage->setLength(row.value(6).toInt());
-                currentMessage->setComment(row.value(8));
-                currentMessage->setCycleTimeFast(row.value(26).toInt());
-                currentMessage->setNrOfRepetitions(row.value(27).toInt());
-                currentMessage->setDelayTime(row.value(28).toInt());
-                currentMessage->setTransmitter(row.value(29).trimmed());
-                if (!currentMessage->getTransmitter().isEmpty()) {
-                    nodeAccumulator.append(currentMessage->getTransmitter());
-                }
-                result.messages.append(currentMessage);
-                continue;
-            }
-            if (!signalName.isEmpty() && currentMessage) {
-                auto *signal = new CanSignal();
-                signal->setName(signalName);
-                signal->setDescription(row.value(8));
-                const QString byteOrder = row.value(9).toLower();
-                signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
-                const int startByte = row.value(10).toInt();
-                const int startBit = row.value(11).toInt();
-                signal->setStartBit(startByte * 8 + startBit);
-                signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
-                signal->setLength(row.value(13).toInt());
-                const QString dataType = row.value(14).toLower();
-                signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
-                signal->setFactor(row.value(15).toDouble());
-                signal->setOffset(row.value(16).toDouble());
-                signal->setMin(row.value(17).toDouble());
-                signal->setMax(row.value(18).toDouble());
-                signal->setUnit(row.value(24).trimmed());
-                bool initOk = false;
-                const quint64 init = parseHexToUInt64(row.value(21), &initOk);
-                signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
-                signal->setInvalidValueHex(row.value(22).trimmed());
-                signal->setInactiveValueHex(row.value(23).trimmed());
-                const QString receivers = row.value(29).trimmed();
-                const QStringList receiverList = receivers.split(QRegularExpression(QStringLiteral("[,\\s]+")), QString::SkipEmptyParts);
-                signal->setReceivers(receiverList);
-                for (const QString &receiver : receiverList) {
-                    nodeAccumulator.append(receiver);
-                }
-                const QStringList valueLines = splitLines(row.value(25));
-                if (!valueLines.isEmpty()) {
-                    QMap<int, QString> valueTable;
-                    for (const QString &line : valueLines) {
-                        const int colonIndex = line.indexOf(':');
-                        if (colonIndex <= 0) continue;
-                        bool valueOk = false;
-                        const int rawValue = parseHexToInt(line.left(colonIndex), &valueOk);
-                        if (!valueOk) continue;
-                        valueTable[rawValue] = line.mid(colonIndex + 1).trimmed();
-                    }
-                    signal->setValueTable(valueTable);
-                }
-                currentMessage->addSignal(signal);
-            }
+            processRowIntoMerge(it.value(), &currentMessage);
         }
+        result.messages = resultOrder;
     }
 
     nodeAccumulator.removeDuplicates();
