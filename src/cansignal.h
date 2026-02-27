@@ -28,6 +28,10 @@ public:
     double getInitialValue() const { return m_initialValue; }
     QString getInvalidValueHex() const { return m_invalidValueHex; }
     QString getInactiveValueHex() const { return m_inactiveValueHex; }
+    // Raw (bus) range imported from Excel hex columns, optional
+    bool hasRawRange() const { return m_hasRawRange; }
+    double getRawMin() const { return m_rawMin; }
+    double getRawMax() const { return m_rawMax; }
     QString getReceiversAsString() const;
     
     // Setters
@@ -48,6 +52,8 @@ public:
     void setInitialValue(double initialValue) { m_initialValue = initialValue; }
     void setInvalidValueHex(const QString &value) { m_invalidValueHex = value; }
     void setInactiveValueHex(const QString &value) { m_inactiveValueHex = value; }
+    void setRawRange(double rawMin, double rawMax) { m_rawMin = rawMin; m_rawMax = rawMax; m_hasRawRange = true; }
+    void clearRawRange() { m_rawMin = 0.0; m_rawMax = 0.0; m_hasRawRange = false; }
     
     // Utility functions
     double rawToPhysical(int rawValue) const;
@@ -72,6 +78,9 @@ private:
     QString m_invalidValueHex;
     QString m_inactiveValueHex;
     QMap<int, QString> m_valueTable; // Raw value -> Description mapping
+    bool m_hasRawRange = false;
+    double m_rawMin = 0.0;
+    double m_rawMax = 0.0;
 };
 
 #endif // CANSIGNAL_H

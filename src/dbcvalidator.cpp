@@ -11,6 +11,29 @@
 namespace
 {
 
+qint64 parseHexToSigned(const QString &text, bool *ok)
+{
+    QString trimmed = text.trimmed();
+    if (trimmed.isEmpty()) {
+        if (ok) {
+            *ok = false;
+        }
+        return 0;
+    }
+
+    bool localOk = false;
+    qint64 value = 0;
+    if (trimmed.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) {
+        value = trimmed.mid(2).toLongLong(&localOk, 16);
+    } else {
+        value = trimmed.toLongLong(&localOk, 10);
+    }
+    if (ok) {
+        *ok = localOk;
+    }
+    return value;
+}
+
 void addError(ValidationResult &result, const QString &msgName, const QString &sigName, const QString &text)
 {
     if (sigName.isEmpty()) {
@@ -139,6 +162,106 @@ void validateSignalValues(const CanMessage *message, const CanSignal *signal, Va
                          .arg(initRaw).arg(rawMin).arg(rawMax));
         }
     }
+
+    // 校验从 Excel 导入的总线最小/最大值(Hex)是否在位宽和有符号/无符号范围内
+    if (signal->hasRawRange()) {
+        const double rawMinHexD = signal->getRawMin();
+        const double rawMaxHexD = signal->getRawMax();
+        const qint64 rawMinHex = static_cast<qint64>(std::llround(rawMinHexD));
+        const qint64 rawMaxHex = static_cast<qint64>(std::llround(rawMaxHexD));
+
+        if (rawMinHex > rawMaxHex) {
+            addError(result, msgName, sigName,
+                     QStringLiteral("总线最小值(Hex)不能大于总线最大值(Hex)"));
+        }
+
+        if (signal->isSigned()) {
+            if (!rawInSignedRange(rawMinHex, length)) {
+                addError(result, msgName, sigName,
+                         QStringLiteral("总线最小值(Hex) %1 超出有符号 %2 位范围 [%3, %4]")
+                             .arg(rawMinHex)
+                             .arg(length)
+                             .arg(rawMinSignedLimit)
+                             .arg(rawMaxSignedLimit));
+            }
+            if (!rawInSignedRange(rawMaxHex, length)) {
+                addError(result, msgName, sigName,
+                         QStringLiteral("总线最大值(Hex) %1 超出有符号 %2 位范围 [%3, %4]")
+                             .arg(rawMaxHex)
+                             .arg(length)
+                             .arg(rawMinSignedLimit)
+                             .arg(rawMaxSignedLimit));
+            }
+        } else {
+            if (rawMinHex < 0 || static_cast<quint64>(rawMinHex) > rawMaxUnsignedLimit) {
+                addError(result, msgName, sigName,
+                         QStringLiteral("总线最小值(Hex) %1 超出无符号 %2 位范围 [0, %3]")
+                             .arg(rawMinHex)
+                             .arg(length)
+                             .arg(rawMaxUnsignedLimit));
+            }
+            if (rawMaxHex < 0 || static_cast<quint64>(rawMaxHex) > rawMaxUnsignedLimit) {
+                addError(result, msgName, sigName,
+                         QStringLiteral("总线最大值(Hex) %1 超出无符号 %2 位范围 [0, %3]")
+                             .arg(rawMaxHex)
+                             .arg(length)
+                             .arg(rawMaxUnsignedLimit));
+            }
+        }
+    }
+
+    // 校验 Invalid / Inactive Value (Hex) 是否在范围内
+    const QString invalidHex = signal->getInvalidValueHex().trimmed();
+    if (!invalidHex.isEmpty()) {
+        bool ok = false;
+        const qint64 val = parseHexToSigned(invalidHex, &ok);
+        if (ok) {
+            if (signal->isSigned()) {
+                if (!rawInSignedRange(val, length)) {
+                    addError(result, msgName, sigName,
+                             QStringLiteral("无效值(Hex) %1 超出有符号 %2 位范围 [%3, %4]")
+                                 .arg(val)
+                                 .arg(length)
+                                 .arg(rawMinSignedLimit)
+                                 .arg(rawMaxSignedLimit));
+                }
+            } else {
+                if (val < 0 || static_cast<quint64>(val) > rawMaxUnsignedLimit) {
+                    addError(result, msgName, sigName,
+                             QStringLiteral("无效值(Hex) %1 超出无符号 %2 位范围 [0, %3]")
+                                 .arg(val)
+                                 .arg(length)
+                                 .arg(rawMaxUnsignedLimit));
+                }
+            }
+        }
+    }
+
+    const QString inactiveHex = signal->getInactiveValueHex().trimmed();
+    if (!inactiveHex.isEmpty()) {
+        bool ok = false;
+        const qint64 val = parseHexToSigned(inactiveHex, &ok);
+        if (ok) {
+            if (signal->isSigned()) {
+                if (!rawInSignedRange(val, length)) {
+                    addError(result, msgName, sigName,
+                             QStringLiteral("非使能值(Hex) %1 超出有符号 %2 位范围 [%3, %4]")
+                                 .arg(val)
+                                 .arg(length)
+                                 .arg(rawMinSignedLimit)
+                                 .arg(rawMaxSignedLimit));
+                }
+            } else {
+                if (val < 0 || static_cast<quint64>(val) > rawMaxUnsignedLimit) {
+                    addError(result, msgName, sigName,
+                             QStringLiteral("非使能值(Hex) %1 超出无符号 %2 位范围 [0, %3]")
+                                 .arg(val)
+                                 .arg(length)
+                                 .arg(rawMaxUnsignedLimit));
+                }
+            }
+        }
+    }
 }
 
 using Cell = std::pair<int, int>;
@@ -253,10 +376,11 @@ ValidationResult validateMessages(const QList<CanMessage *> &messages)
         if (!msg) {
             continue;
         }
-        // 单信号数值一致性校验暂不启用，仅做重叠校验
-        // for (CanSignal *sig : msg->getSignals()) {
-        //     if (sig) { validateSignalValues(msg, sig, result); }
-        // }
+        for (CanSignal *sig : msg->getSignals()) {
+            if (sig) {
+                validateSignalValues(msg, sig, result);
+            }
+        }
         validateMessageOverlap(msg, result);
     }
     return result;

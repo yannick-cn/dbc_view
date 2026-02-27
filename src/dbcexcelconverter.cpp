@@ -1591,6 +1591,16 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                     signal->setOffset(row.value(22).toDouble());
                     signal->setMin(row.value(23).toDouble());
                     signal->setMax(row.value(24).toDouble());
+                    // Hex bus min/max from Excel (columns 25, 26)
+                    bool rawMinOk = false;
+                    bool rawMaxOk = false;
+                    const int rawMin = parseHexToInt(row.value(25), &rawMinOk);
+                    const int rawMax = parseHexToInt(row.value(26), &rawMaxOk);
+                    if (rawMinOk && rawMaxOk) {
+                        signal->setRawRange(static_cast<double>(rawMin), static_cast<double>(rawMax));
+                    } else {
+                        signal->clearRawRange();
+                    }
                     signal->setUnit(row.value(30).trimmed());
                     bool initOk = false;
                     const quint64 init = parseHexToUInt64(row.value(27), &initOk);
