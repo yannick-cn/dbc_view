@@ -156,8 +156,9 @@ BO_ 1472 TBox_FrP02_5C0: 8 GW
 BO_ 1842 Diag_PhyReq_FLSDR: 8 GW
  SG_ Diag_PhyReq_FLSDR : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
 
-BO_ 2015 Diag_FuncReq_7DF: 8 GW
+BO_ 2015 Diag_FuncReq_7DF: 32 GW
  SG_ Diag_FuncReq_7DF : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
+ SG_ Diag_FuncReq_7DF_Copy : 71|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
 
 BO_ 1189 RLSDR_NM_4A5: 8 RLSDR
  SG_ RLSDR_SrceNodID : 7|8@0+ (1,0) [0|255] "" FLSDR
@@ -180,6 +181,14 @@ BO_ 860 TBox_FrP06_35C: 8 GW
 
 BO_ 1285 VTM_FrP01_505: 8 GW
  SG_ VTM_TralrSts : 23|1@0+ (1,0) [0|1] "" FLSDR
+
+BO_ 2016 Diag_FuncReq_7DF_Copy: 32 GW
+ SG_ Diag_FuncReq_7DF : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
+ SG_ Diag_FuncReq_7DF_Copy : 71|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
+
+BO_ 2017 Diag_FuncReq_7DF_Copy_Copy: 32 GW
+ SG_ Diag_FuncReq_7DF : 7|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
+ SG_ Diag_FuncReq_7DF_Copy : 71|64@0+ (1,0) [0|1.844674407370960E+019] "" FLSDR
 BO_TX_BU_ 821 : FLSDR;
 BO_TX_BU_ 812 : ADAS,GW;
 BO_TX_BU_ 1186 : FLSDR;
@@ -204,6 +213,8 @@ BO_TX_BU_ 1189 : FLSDR;
 BO_TX_BU_ 1190 : FLSDR;
 BO_TX_BU_ 860 : FLSDR;
 BO_TX_BU_ 1285 : FLSDR;
+BO_TX_BU_ 2016 : FLSDR;
+BO_TX_BU_ 2017 : FLSDR;
 
 CM_ BO_ 821 "高阶ADAS发送";
 CM_ SG_ 821 ADAS_Plt_Cfg_FCTASetResp "（高阶）前方侧向来车预警开关反馈";
@@ -448,6 +459,10 @@ BA_ "GenMsgSendType" BO_ 860 0;
 BA_ "GenMsgCycleTime" BO_ 1285 200;
 BA_ "VFrameFormat" BO_ 1285 14;
 BA_ "GenMsgSendType" BO_ 1285 0;
+BA_ "VFrameFormat" BO_ 2016 14;
+BA_ "GenMsgSendType" BO_ 2016 0;
+BA_ "VFrameFormat" BO_ 2017 14;
+BA_ "GenMsgSendType" BO_ 2017 0;
 BA_ "GenSigSendType" SG_ 821 ADAS_Plt_Cfg_FCTASetResp 0;
 BA_ "GenSigStartValue" SG_ 821 ADAS_Plt_Cfg_FCTASetResp 0;
 BA_ "GenSigInactiveValue" SG_ 821 ADAS_Plt_Cfg_FCTASetResp 0;
@@ -697,6 +712,9 @@ BA_ "GenSigInactiveValue" SG_ 1842 Diag_PhyReq_FLSDR 0;
 BA_ "GenSigSendType" SG_ 2015 Diag_FuncReq_7DF 1;
 BA_ "GenSigStartValue" SG_ 2015 Diag_FuncReq_7DF 0;
 BA_ "GenSigInactiveValue" SG_ 2015 Diag_FuncReq_7DF 0;
+BA_ "GenSigSendType" SG_ 2015 Diag_FuncReq_7DF_Copy 1;
+BA_ "GenSigStartValue" SG_ 2015 Diag_FuncReq_7DF_Copy 0;
+BA_ "GenSigInactiveValue" SG_ 2015 Diag_FuncReq_7DF_Copy 0;
 BA_ "GenSigSendType" SG_ 1189 RLSDR_SrceNodID 0;
 BA_ "GenSigStartValue" SG_ 1189 RLSDR_SrceNodID 0;
 BA_ "GenSigInactiveValue" SG_ 1189 RLSDR_SrceNodID 0;
@@ -739,6 +757,18 @@ BA_ "GenSigInactiveValue" SG_ 860 TBox_FOTATrgt 0;
 BA_ "GenSigSendType" SG_ 1285 VTM_TralrSts 0;
 BA_ "GenSigStartValue" SG_ 1285 VTM_TralrSts 0;
 BA_ "GenSigInactiveValue" SG_ 1285 VTM_TralrSts 0;
+BA_ "GenSigSendType" SG_ 2016 Diag_FuncReq_7DF 1;
+BA_ "GenSigStartValue" SG_ 2016 Diag_FuncReq_7DF 0;
+BA_ "GenSigInactiveValue" SG_ 2016 Diag_FuncReq_7DF 0;
+BA_ "GenSigSendType" SG_ 2016 Diag_FuncReq_7DF_Copy 1;
+BA_ "GenSigStartValue" SG_ 2016 Diag_FuncReq_7DF_Copy 0;
+BA_ "GenSigInactiveValue" SG_ 2016 Diag_FuncReq_7DF_Copy 0;
+BA_ "GenSigSendType" SG_ 2017 Diag_FuncReq_7DF 1;
+BA_ "GenSigStartValue" SG_ 2017 Diag_FuncReq_7DF 0;
+BA_ "GenSigInactiveValue" SG_ 2017 Diag_FuncReq_7DF 0;
+BA_ "GenSigSendType" SG_ 2017 Diag_FuncReq_7DF_Copy 1;
+BA_ "GenSigStartValue" SG_ 2017 Diag_FuncReq_7DF_Copy 0;
+BA_ "GenSigInactiveValue" SG_ 2017 Diag_FuncReq_7DF_Copy 0;
 VAL_ 821 ADAS_Plt_Cfg_FCTASetResp 0 "No Response" 1 "ON" 2 "OFF" 3 "Reserved";
 VAL_ 812 FLSDR_FCTA_Warng_L 0 "No warning" 1 "Warning level 1" 2 "Warning level 2" 3 "Reserved";
 VAL_ 170 VCU_AccrPedlPosnInv 0 "Normal" 1 "Invalid";

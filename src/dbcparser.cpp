@@ -120,6 +120,27 @@ bool DbcParser::loadFromExcelImport(DbcExcelConverter::ImportResult &result)
     return true;
 }
 
+void DbcParser::addMessage(CanMessage *message)
+{
+    if (!message) {
+        return;
+    }
+    if (!m_messages.contains(message)) {
+        m_messages.append(message);
+    }
+    m_messageMap[message->getId()] = message;
+}
+
+void DbcParser::removeMessage(CanMessage *message)
+{
+    if (!message) {
+        return;
+    }
+    m_messages.removeAll(message);
+    m_messageMap.remove(message->getId());
+    delete message;
+}
+
 bool DbcParser::parseLine(const QString &line)
 {
     if (line.isEmpty() || line.startsWith("//")) {

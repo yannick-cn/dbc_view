@@ -18,6 +18,9 @@ public:
     bool parseFile(const QString &filePath);
     bool loadFromExcelImport(DbcExcelConverter::ImportResult &result);
     const QList<CanMessage*> &getMessages() const { return m_messages; }
+    QList<CanMessage*> &messages() { return m_messages; }
+    void addMessage(CanMessage *message);
+    void removeMessage(CanMessage *message);
     CanMessage* getMessage(quint32 id) const;
     QString getVersion() const { return m_version; }
     QString getBusType() const { return m_busType; }

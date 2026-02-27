@@ -27,6 +27,26 @@ void CanMessage::addSignal(CanSignal *signal)
     }
 }
 
+void CanMessage::removeSignal(CanSignal *signal)
+{
+    if (!signal) {
+        return;
+    }
+    m_signals.removeAll(signal);
+}
+
+void CanMessage::insertSignal(int index, CanSignal *signal)
+{
+    if (!signal) {
+        return;
+    }
+    if (index < 0 || index > m_signals.size()) {
+        m_signals.append(signal);
+    } else {
+        m_signals.insert(index, signal);
+    }
+}
+
 QString CanMessage::getFormattedId() const
 {
     return QString("0x%1").arg(m_id, 0, 16).toUpper();

@@ -16,6 +16,7 @@
 #include <QGroupBox>
 #include <QTabWidget>
 #include <QStackedWidget>
+#include <QPushButton>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QMimeData>
@@ -41,6 +42,12 @@ private slots:
     void onMessageSelectionChanged();
     void onSignalSelectionChanged();
     void onSignalTableHeaderClicked(int logicalIndex);
+    void onSignalCellChanged(QTableWidgetItem *item);
+    void onMessageTreeItemChanged(QTreeWidgetItem *item, int column);
+    void addMessage();
+    void deleteMessage();
+    void addSignal();
+    void deleteSignal();
     void showAbout();
 
 protected:
@@ -77,6 +84,7 @@ private:
     QTabWidget *m_detailsTabs;
     QTextEdit *m_signalDetails;
     QTextEdit *m_valueTable;
+    QPushButton *m_applyValueTableButton;
     
     // Status bar
     QLabel *m_statusLabel;
@@ -89,6 +97,31 @@ private:
     QString m_currentDbcPath;
     int m_signalTableSortColumn = -1;
     Qt::SortOrder m_signalTableSortOrder = Qt::AscendingOrder;
+    bool m_isUpdatingSignalTable = false;
+    bool m_isUpdatingMessageTree = false;
+
+    void applyValueTableChanges();
+    void onMessageTreeContextMenuRequested(const QPoint &pos);
+    void onSignalTableContextMenuRequested(const QPoint &pos);
+    void copyMessageAsNew();
+    void copySignalAsNew(int row);
+    void deleteSignalAtRow(int row);
+
+    // 保存/撤销相关
+    bool m_isDirty = false;
+    QList<CanMessage*> m_savedMessages;
+    QString m_savedVersion;
+    QString m_savedBusType;
+    QStringList m_savedNodes;
+    QString m_savedDocumentTitle;
+    QList<DbcExcelConverter::ChangeHistoryEntry> m_savedChangeHistory;
+    QList<QPair<QString, QMap<int, QString>>> m_savedGlobalValueTables;
+
+    void clearSavedSnapshot();
+    QList<CanMessage*> cloneMessages(const QList<CanMessage*> &source) const;
+    void createSnapshotFromCurrent();
+    void restoreSnapshotToCurrent();
+    void markDirty();
 };
 
 #endif // MAINWINDOW_H

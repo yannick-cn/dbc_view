@@ -36,6 +36,8 @@ public:
     void setLength(int length) { m_length = length; }
     void setTransmitter(const QString &transmitter) { m_transmitter = transmitter; }
     void addSignal(CanSignal *signal);
+    void removeSignal(CanSignal *signal);
+    void insertSignal(int index, CanSignal *signal);
     void setCycleTime(int cycleTime) { m_cycleTime = cycleTime; }
     void setFrameFormat(const QString &frameFormat) { m_frameFormat = frameFormat; }
     void setSendType(const QString &sendType) { m_sendType = sendType; }
