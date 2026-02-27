@@ -377,6 +377,7 @@ QByteArray generateWorkbookXml(int sheetCount, const QStringList &dataSheetNames
 
     writer.writeStartElement("bookViews");
     writer.writeStartElement("workbookView");
+    writer.writeAttribute("activeTab", "2");
     writer.writeAttribute("tabRatio", "600");
     writer.writeEndElement();
     writer.writeEndElement();
@@ -796,7 +797,7 @@ static QString sanitizeSheetName(const QString &name)
     return s;
 }
 
-QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QString &busType)
+QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QString &busType, bool withFreezePanes)
 {
     const QStringList headers = headerLabels();
     const int columnCount = headers.size();
@@ -833,17 +834,37 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
 
     writer.writeStartElement("sheetViews");
     writer.writeStartElement("sheetView");
-    writer.writeAttribute("tabSelected", "1");
     writer.writeAttribute("workbookViewId", "0");
     writer.writeAttribute("showGridLines", "1");
-    writer.writeAttribute("zoomScale", "70");
-    writer.writeStartElement("pane");
-    writer.writeAttribute("xSplit", "12");
-    writer.writeAttribute("ySplit", "1");
-    writer.writeAttribute("topLeftCell", "G2");
-    writer.writeAttribute("activePane", "bottomRight");
-    writer.writeAttribute("state", "frozen");
-    writer.writeEndElement();
+    if (withFreezePanes) {
+        writer.writeStartElement("pane");
+        writer.writeAttribute("xSplit", "12");
+        writer.writeAttribute("ySplit", "1");
+        writer.writeAttribute("topLeftCell", "M2");
+        writer.writeAttribute("activePane", "bottomRight");
+        writer.writeAttribute("state", "frozen");
+        writer.writeEndElement();
+        writer.writeStartElement("selection");
+        writer.writeAttribute("pane", "topLeft");
+        writer.writeAttribute("activeCell", "A1");
+        writer.writeAttribute("sqref", "A1");
+        writer.writeEndElement();
+        writer.writeStartElement("selection");
+        writer.writeAttribute("pane", "topRight");
+        writer.writeAttribute("activeCell", "M1");
+        writer.writeAttribute("sqref", "M1");
+        writer.writeEndElement();
+        writer.writeStartElement("selection");
+        writer.writeAttribute("pane", "bottomLeft");
+        writer.writeAttribute("activeCell", "A2");
+        writer.writeAttribute("sqref", "A2");
+        writer.writeEndElement();
+        writer.writeStartElement("selection");
+        writer.writeAttribute("pane", "bottomRight");
+        writer.writeAttribute("activeCell", "M2");
+        writer.writeAttribute("sqref", "M2");
+        writer.writeEndElement();
+    }
     writer.writeEndElement();
     writer.writeEndElement();
 
@@ -1367,7 +1388,7 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
             ? messagesForNode(messages, nodes.at(i))
             : messages;
         const QString path = QStringLiteral("xl/worksheets/sheet%1.xml").arg(i + 3);
-        entries.append({path, generateWorksheetXml(sheetMessages, busType)});
+        entries.append({path, generateWorksheetXml(sheetMessages, busType, (i == 0))});
     }
 
     return writeZipArchive(filePath, entries, error);
