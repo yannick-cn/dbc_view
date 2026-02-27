@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=DBC Viewer
+Comment=DBC文件查看器 - CAN消息和信号分析工具
+Exec=DBCViewer
+Icon=icon
+Terminal=false
+StartupNotify=true
+Categories=Development;Electronics;
+Keywords=DBC;CAN;Automotive;Signal;Message;
+MimeType=application/x-dbc;

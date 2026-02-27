@@ -57,6 +57,33 @@ sudo yum install qt6-qtbase-devel qt6-qttools-devel cmake gcc-c++
    ./DBCViewer
    ```
 
+## 生成 AppImage（免安装打包）
+
+在一台已经安装好构建依赖（见上文“安装依赖”）的构建机上，可以一键打包生成可分发的 AppImage 文件：
+
+```bash
+chmod +x make_appimage.sh
+./make_appimage.sh
+```
+
+脚本会：
+
+- **自动构建** Release 版本（如有需要会先执行 `./build.sh`）
+- **自动下载** `linuxdeployqt-continuous-x86_64.AppImage`（如本地不存在）
+- 使用 `linuxdeployqt` 将 `DBCViewer` 连同 Qt 运行库一起打包成一个 `*.AppImage` 文件
+
+打包完成后，当前目录下会出现类似 `DBCViewer-x86_64.AppImage` 的文件。将该文件拷贝到目标 Linux 桌面环境（无需安装 Qt 开发包），在目标机上执行：
+
+```bash
+chmod +x DBCViewer-*.AppImage
+./DBCViewer-*.AppImage
+```
+
+如构建机上 Qt 安装位置较特殊，可通过环境变量自定义：
+
+- `QMAKE_BIN`：指定 `qmake` 或 `qmake6` 路径，例如：`QMAKE_BIN=/opt/qt6/bin/qmake6 ./make_appimage.sh`
+- `LINUXDEPLOYQT_APPIMAGE`：指定已下载好的 `linuxdeployqt` AppImage 文件名
+
 ## 使用方法
 
 1. **打开DBC文件**: 点击菜单 "File" -> "Open DBC File..." 选择要查看的DBC文件
