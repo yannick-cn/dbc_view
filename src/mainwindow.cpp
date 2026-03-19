@@ -9,6 +9,11 @@
 #include <QScreen>
 #include <QDebug>
 #include <QClipboard>
+#include <QCheckBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLineEdit>
 
 #include <QtGlobal>
 
@@ -61,6 +66,103 @@ static int displayStartBit(const CanSignal *signal)
     }
     // Intel：startBit 本身就是 LSB 口径
     return startBit;
+}
+
+static QString applyPrefixRule(const QString &name, const QString &newPrefix)
+{
+    const QString trimmedPrefix = newPrefix.trimmed();
+    if (trimmedPrefix.isEmpty()) {
+        return name;
+    }
+    const int idx = name.indexOf(QLatin1Char('_'));
+    if (idx > 0) {
+        // Replace prefix before first underscore, keep underscore+suffix
+        return trimmedPrefix + name.mid(idx);
+    }
+    // No underscore (or underscore at position 0): directly prepend prefix
+    return trimmedPrefix + name;
+}
+
+struct PrefixCopyOptions {
+    QString prefix;
+    bool applyToMessageName = true;
+    bool applyToSignalNames = true;
+};
+
+static bool askPrefixCopyOptions(QWidget *parent,
+                                const QString &title,
+                                bool allowMessageOption,
+                                PrefixCopyOptions *out)
+{
+    if (!out) {
+        return false;
+    }
+
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    dialog.setModal(true);
+
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *form = new QFormLayout();
+    layout->addLayout(form);
+
+    auto *prefixEdit = new QLineEdit(&dialog);
+    prefixEdit->setPlaceholderText(QObject::tr("例如：FR"));
+    form->addRow(QObject::tr("新前缀"), prefixEdit);
+
+    auto *applyMsg = new QCheckBox(QObject::tr("修改报文名前缀"), &dialog);
+    auto *applySig = new QCheckBox(QObject::tr("修改信号名前缀"), &dialog);
+    applyMsg->setChecked(true);
+    applySig->setChecked(true);
+    applyMsg->setEnabled(allowMessageOption);
+    if (!allowMessageOption) {
+        applyMsg->setChecked(false);
+    }
+    layout->addWidget(applyMsg);
+    layout->addWidget(applySig);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    buttons->button(QDialogButtonBox::Ok)->setText(QObject::tr("确定"));
+    buttons->button(QDialogButtonBox::Cancel)->setText(QObject::tr("取消"));
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+
+    out->prefix = prefixEdit->text().trimmed();
+    out->applyToMessageName = allowMessageOption && applyMsg->isChecked();
+    out->applyToSignalNames = applySig->isChecked();
+    return true;
+}
+
+static QString uniqueSignalName(const CanMessage *message, const CanSignal *self, const QString &desired)
+{
+    if (!message) {
+        return desired;
+    }
+    auto exists = [&](const QString &name) -> bool {
+        for (CanSignal *s : message->getSignals()) {
+            if (!s || s == self) {
+                continue;
+            }
+            if (s->getName() == name) {
+                return true;
+            }
+        }
+        return false;
+    };
+    if (!exists(desired)) {
+        return desired;
+    }
+    int k = 1;
+    QString candidate;
+    do {
+        candidate = desired + QStringLiteral("_") + QString::number(k++);
+    } while (exists(candidate));
+    return candidate;
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -983,10 +1085,16 @@ void MainWindow::onMessageTreeContextMenuRequested(const QPoint &pos)
     }
     QMenu menu(this);
     QAction *copyRow = menu.addAction(tr("复制为新的报文"));
+    QAction *copyPrefix = menu.addAction(tr("复制并修改前缀..."));
+    QAction *renamePrefix = menu.addAction(tr("修改前缀..."));
     QAction *deleteRow = menu.addAction(tr("删除报文"));
     QAction *chosen = menu.exec(m_messageTree->viewport()->mapToGlobal(pos));
     if (chosen == copyRow) {
         copyMessageAsNew();
+    } else if (chosen == copyPrefix) {
+        copyMessageWithPrefix();
+    } else if (chosen == renamePrefix) {
+        renameMessagePrefix();
     } else if (chosen == deleteRow) {
         deleteMessage();
     }
@@ -1000,6 +1108,8 @@ void MainWindow::onSignalTableContextMenuRequested(const QPoint &pos)
     int row = m_signalTable->itemAt(pos)->row();
     QMenu menu(this);
     QAction *copyRow = menu.addAction(tr("复制为新的信号"));
+    QAction *copyPrefix = menu.addAction(tr("复制并修改前缀..."));
+    QAction *renamePrefix = menu.addAction(tr("修改前缀..."));
     QAction *deleteRow = menu.addAction(tr("删除信号"));
     // If right-clicked row is not selected, switch selection to it.
     if (!m_signalTable->item(row, 0)->isSelected()) {
@@ -1009,6 +1119,10 @@ void MainWindow::onSignalTableContextMenuRequested(const QPoint &pos)
     QAction *chosen = menu.exec(m_signalTable->viewport()->mapToGlobal(pos));
     if (chosen == copyRow) {
         copySignalAsNew(row);
+    } else if (chosen == copyPrefix) {
+        copySignalWithPrefix(row);
+    } else if (chosen == renamePrefix) {
+        renameSignalPrefix(row);
     } else if (chosen == deleteRow) {
         deleteSignalAtRow(row);
     }
@@ -1114,6 +1228,226 @@ void MainWindow::copyMessageAsNew()
     markDirty();
 }
 
+void MainWindow::copyMessageWithPrefix()
+{
+    if (!m_dbcParser) {
+        return;
+    }
+
+    PrefixCopyOptions opt;
+    if (!askPrefixCopyOptions(this, tr("复制并修改前缀（报文/信号）"), true, &opt)) {
+        return;
+    }
+    if (!opt.applyToMessageName && !opt.applyToSignalNames) {
+        return;
+    }
+
+    const QList<QTreeWidgetItem *> items = m_messageTree->selectedItems();
+    if (items.isEmpty()) {
+        return;
+    }
+
+    std::set<CanMessage *> selectedMessages;
+    for (QTreeWidgetItem *it : items) {
+        if (!it) {
+            continue;
+        }
+        QTreeWidgetItem *msgItem = it->parent() != nullptr ? it->parent() : it;
+        void *ptr = msgItem->data(0, Qt::UserRole).value<void *>();
+        CanMessage *origMsg = static_cast<CanMessage *>(ptr);
+        if (origMsg) {
+            selectedMessages.insert(origMsg);
+        }
+    }
+    if (selectedMessages.empty()) {
+        return;
+    }
+
+    // Unique ID
+    quint32 maxId = 0;
+    for (CanMessage *msg : m_dbcParser->getMessages()) {
+        if (msg && msg->getId() > maxId) {
+            maxId = msg->getId();
+        }
+    }
+
+    // Existing message names for collision avoidance
+    std::set<QString> existingMsgNames;
+    for (CanMessage *msg : m_dbcParser->getMessages()) {
+        if (msg) {
+            existingMsgNames.insert(msg->getName());
+        }
+    }
+
+    quint32 nextId = maxId + 1;
+    for (CanMessage *origMsg : selectedMessages) {
+        if (!origMsg) {
+            continue;
+        }
+
+        CanMessage *msg = new CanMessage();
+        msg->setId(nextId++);
+
+        const QString baseMsgName = origMsg->getName().isEmpty() ? QStringLiteral("Message") : origMsg->getName();
+        QString newMsgName = opt.applyToMessageName ? applyPrefixRule(baseMsgName, opt.prefix) : baseMsgName;
+        // Avoid duplicate message names
+        if (existingMsgNames.count(newMsgName)) {
+            const QString base = newMsgName + QStringLiteral("_Copy");
+            QString candidate = base;
+            int k = 1;
+            while (existingMsgNames.count(candidate)) {
+                candidate = base + QString::number(k++);
+            }
+            newMsgName = candidate;
+        }
+        existingMsgNames.insert(newMsgName);
+        msg->setName(newMsgName);
+
+        msg->setLength(origMsg->getLength());
+        msg->setTransmitter(origMsg->getTransmitter());
+        msg->setCycleTime(origMsg->getCycleTime());
+        msg->setFrameFormat(origMsg->getFrameFormat());
+        msg->setSendType(origMsg->getSendType());
+        msg->setCycleTimeFast(origMsg->getCycleTimeFast());
+        msg->setNrOfRepetitions(origMsg->getNrOfRepetitions());
+        msg->setDelayTime(origMsg->getDelayTime());
+        msg->setComment(origMsg->getComment());
+        msg->setMessageType(origMsg->getMessageType());
+        msg->setReceivers(origMsg->getReceivers());
+
+        // Track signal name collisions within new message
+        std::set<QString> newSigNames;
+        for (CanSignal *origSig : origMsg->getSignals()) {
+            if (!origSig) {
+                continue;
+            }
+            CanSignal *sig = new CanSignal();
+            const QString baseSigName = origSig->getName().isEmpty() ? QStringLiteral("Signal") : origSig->getName();
+            QString newSigName = opt.applyToSignalNames ? applyPrefixRule(baseSigName, opt.prefix) : baseSigName;
+            // Avoid duplicates within the copied message
+            if (newSigNames.count(newSigName)) {
+                const QString base = newSigName + QStringLiteral("_Copy");
+                QString candidate = base;
+                int k = 1;
+                while (newSigNames.count(candidate)) {
+                    candidate = base + QString::number(k++);
+                }
+                newSigName = candidate;
+            }
+            newSigNames.insert(newSigName);
+
+            sig->setName(newSigName);
+            sig->setStartBit(origSig->getStartBit());
+            sig->setLength(origSig->getLength());
+            sig->setByteOrder(origSig->getByteOrder());
+            sig->setSigned(origSig->isSigned());
+            sig->setFactor(origSig->getFactor());
+            sig->setOffset(origSig->getOffset());
+            sig->setMin(origSig->getMin());
+            sig->setMax(origSig->getMax());
+            sig->setUnit(origSig->getUnit());
+            sig->setReceivers(origSig->getReceivers());
+            sig->setDescription(origSig->getDescription());
+            sig->setSendType(origSig->getSendType());
+            sig->setInitialValue(origSig->getInitialValue());
+            sig->setInvalidValueHex(origSig->getInvalidValueHex());
+            sig->setInactiveValueHex(origSig->getInactiveValueHex());
+            sig->setValueTable(origSig->getValueTable());
+            if (origSig->hasRawRange()) {
+                sig->setRawRange(origSig->getRawMin(), origSig->getRawMax());
+            }
+            msg->addSignal(sig);
+        }
+
+        m_dbcParser->addMessage(msg);
+    }
+
+    populateMessageTree();
+    markDirty();
+}
+
+void MainWindow::renameMessagePrefix()
+{
+    if (!m_dbcParser) {
+        return;
+    }
+
+    PrefixCopyOptions opt;
+    if (!askPrefixCopyOptions(this, tr("修改前缀（报文/信号）"), true, &opt)) {
+        return;
+    }
+    if (!opt.applyToMessageName && !opt.applyToSignalNames) {
+        return;
+    }
+
+    const QList<QTreeWidgetItem *> items = m_messageTree->selectedItems();
+    if (items.isEmpty()) {
+        return;
+    }
+
+    std::set<CanMessage *> selectedMessages;
+    for (QTreeWidgetItem *it : items) {
+        if (!it) continue;
+        QTreeWidgetItem *msgItem = it->parent() != nullptr ? it->parent() : it;
+        void *ptr = msgItem->data(0, Qt::UserRole).value<void *>();
+        CanMessage *msg = static_cast<CanMessage *>(ptr);
+        if (msg) {
+            selectedMessages.insert(msg);
+        }
+    }
+    if (selectedMessages.empty()) {
+        return;
+    }
+
+    // Existing message names (excluding ones being edited) for collision avoidance
+    std::set<QString> otherMsgNames;
+    for (CanMessage *m : m_dbcParser->getMessages()) {
+        if (!m) continue;
+        if (selectedMessages.count(m)) continue;
+        otherMsgNames.insert(m->getName());
+    }
+
+    for (CanMessage *msg : selectedMessages) {
+        if (!msg) continue;
+
+        if (opt.applyToMessageName) {
+            const QString baseMsgName = msg->getName().isEmpty() ? QStringLiteral("Message") : msg->getName();
+            QString newMsgName = applyPrefixRule(baseMsgName, opt.prefix);
+            if (otherMsgNames.count(newMsgName)) {
+                // disambiguate
+                const QString base = newMsgName;
+                int k = 1;
+                QString candidate = base;
+                while (otherMsgNames.count(candidate)) {
+                    candidate = base + QStringLiteral("_") + QString::number(k++);
+                }
+                newMsgName = candidate;
+            }
+            otherMsgNames.insert(newMsgName);
+            msg->setName(newMsgName);
+        }
+
+        if (opt.applyToSignalNames) {
+            for (CanSignal *sig : msg->getSignals()) {
+                if (!sig) continue;
+                const QString baseSigName = sig->getName().isEmpty() ? QStringLiteral("Signal") : sig->getName();
+                const QString desired = applyPrefixRule(baseSigName, opt.prefix);
+                sig->setName(uniqueSignalName(msg, sig, desired));
+            }
+        }
+    }
+
+    populateMessageTree();
+    if (m_currentMessage) {
+        populateSignalTable(m_currentMessage);
+        m_signalLayout->setMessage(m_currentMessage);
+    }
+    if (m_currentSignal) {
+        populateSignalDetails(m_currentSignal);
+    }
+    markDirty();
+}
+
 void MainWindow::copySignalAsNew(int row)
 {
     if (!m_currentMessage) {
@@ -1213,6 +1547,178 @@ void MainWindow::copySignalAsNew(int row)
     populateMessageTree();
     populateSignalTable(m_currentMessage);
     m_signalLayout->setMessage(m_currentMessage);
+    markDirty();
+}
+
+void MainWindow::copySignalWithPrefix(int row)
+{
+    if (!m_currentMessage) {
+        return;
+    }
+
+    PrefixCopyOptions opt;
+    if (!askPrefixCopyOptions(this, tr("复制并修改前缀（信号）"), false, &opt)) {
+        return;
+    }
+    if (!opt.applyToSignalNames) {
+        return;
+    }
+
+    // 与 copySignalAsNew 一致：若 row 在选中集合里，复制选中集合；否则只复制 row
+    std::set<int> selectedRows;
+    for (QTableWidgetItem *it : m_signalTable->selectedItems()) {
+        if (it) {
+            selectedRows.insert(it->row());
+        }
+    }
+    if (selectedRows.empty()) {
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    } else if (selectedRows.find(row) == selectedRows.end()) {
+        selectedRows.clear();
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    }
+
+    std::vector<CanSignal *> origSignals;
+    std::set<CanSignal *> origSet;
+    for (int r : selectedRows) {
+        if (r < 0 || r >= m_signalTable->rowCount()) {
+            continue;
+        }
+        QTableWidgetItem *nameItem = m_signalTable->item(r, 0);
+        if (!nameItem) {
+            continue;
+        }
+        void *ptr = nameItem->data(Qt::UserRole).value<void *>();
+        CanSignal *origSig = static_cast<CanSignal *>(ptr);
+        if (!origSig) {
+            continue;
+        }
+        if (origSet.insert(origSig).second) {
+            origSignals.push_back(origSig);
+        }
+    }
+    if (origSignals.empty()) {
+        return;
+    }
+
+    int copyIndex = 1;
+    for (CanSignal *origSig : origSignals) {
+        if (!origSig) {
+            continue;
+        }
+        CanSignal *sig = new CanSignal();
+
+        const QString baseName = origSig->getName().isEmpty() ? QStringLiteral("Signal") : origSig->getName();
+        QString candidate = applyPrefixRule(baseName, opt.prefix);
+        if (origSignals.size() > 1) {
+            candidate += QString::number(copyIndex++);
+        }
+        QString finalName = candidate;
+        int nameTry = 1;
+        while (m_currentMessage->getSignal(finalName) != nullptr) {
+            finalName = candidate + QStringLiteral("_") + QString::number(nameTry++);
+        }
+        sig->setName(finalName);
+
+        sig->setStartBit(origSig->getStartBit());
+        sig->setLength(origSig->getLength());
+        sig->setByteOrder(origSig->getByteOrder());
+        sig->setSigned(origSig->isSigned());
+        sig->setFactor(origSig->getFactor());
+        sig->setOffset(origSig->getOffset());
+        sig->setMin(origSig->getMin());
+        sig->setMax(origSig->getMax());
+        sig->setUnit(origSig->getUnit());
+        sig->setReceivers(origSig->getReceivers());
+        sig->setDescription(origSig->getDescription());
+        sig->setSendType(origSig->getSendType());
+        sig->setInitialValue(origSig->getInitialValue());
+        sig->setInvalidValueHex(origSig->getInvalidValueHex());
+        sig->setInactiveValueHex(origSig->getInactiveValueHex());
+        sig->setValueTable(origSig->getValueTable());
+        if (origSig->hasRawRange()) {
+            sig->setRawRange(origSig->getRawMin(), origSig->getRawMax());
+        }
+
+        m_currentMessage->addSignal(sig);
+    }
+
+    populateMessageTree();
+    populateSignalTable(m_currentMessage);
+    m_signalLayout->setMessage(m_currentMessage);
+    markDirty();
+}
+
+void MainWindow::renameSignalPrefix(int row)
+{
+    if (!m_currentMessage) {
+        return;
+    }
+
+    PrefixCopyOptions opt;
+    if (!askPrefixCopyOptions(this, tr("修改前缀（信号）"), false, &opt)) {
+        return;
+    }
+    if (!opt.applyToSignalNames) {
+        return;
+    }
+
+    // 若 row 在选中集合里，则修改选中集合；否则只修改 row
+    std::set<int> selectedRows;
+    for (QTableWidgetItem *it : m_signalTable->selectedItems()) {
+        if (it) {
+            selectedRows.insert(it->row());
+        }
+    }
+    if (selectedRows.empty()) {
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    } else if (selectedRows.find(row) == selectedRows.end()) {
+        selectedRows.clear();
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    }
+
+    // collect unique pointers
+    std::vector<CanSignal *> sigs;
+    std::set<CanSignal *> sigSet;
+    for (int r : selectedRows) {
+        if (r < 0 || r >= m_signalTable->rowCount()) continue;
+        QTableWidgetItem *nameItem = m_signalTable->item(r, 0);
+        if (!nameItem) continue;
+        void *ptr = nameItem->data(Qt::UserRole).value<void *>();
+        CanSignal *sig = static_cast<CanSignal *>(ptr);
+        if (!sig) continue;
+        if (sigSet.insert(sig).second) {
+            sigs.push_back(sig);
+        }
+    }
+    if (sigs.empty()) {
+        return;
+    }
+
+    for (CanSignal *sig : sigs) {
+        const QString baseSigName = sig->getName().isEmpty() ? QStringLiteral("Signal") : sig->getName();
+        const QString desired = applyPrefixRule(baseSigName, opt.prefix);
+        sig->setName(uniqueSignalName(m_currentMessage, sig, desired));
+    }
+
+    populateMessageTree();
+    populateSignalTable(m_currentMessage);
+    m_signalLayout->setMessage(m_currentMessage);
+    if (m_currentSignal) {
+        populateSignalDetails(m_currentSignal);
+    }
     markDirty();
 }
 

@@ -104,7 +104,11 @@ private:
     void onMessageTreeContextMenuRequested(const QPoint &pos);
     void onSignalTableContextMenuRequested(const QPoint &pos);
     void copyMessageAsNew();
+    void copyMessageWithPrefix();
+    void renameMessagePrefix();
     void copySignalAsNew(int row);
+    void copySignalWithPrefix(int row);
+    void renameSignalPrefix(int row);
     void deleteSignalAtRow(int row);
 
     // 保存/撤销相关
