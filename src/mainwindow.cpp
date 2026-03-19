@@ -16,6 +16,51 @@
 #include <cmath>
 #include <limits>
 
+// DBC Motorola 语义：@0 Motorola 时，DBC 的 startBit 表示 MSB 位位置。
+// CANoe 期望展示口径：Motorola 的 StartBit 展示为对应的 LSB 位位置。
+// 本工程内部仍按 DBC startBit 语义存储，界面显示/导入导出时做转换。
+static int motorolaMsbToLsbDisplay(int startBitMsb, int length)
+{
+    int bitIndex = startBitMsb;
+    // 从 MSB 走 length-1 次更新后，得到最后一位（LSB）的物理位索引。
+    for (int i = 0; i < length - 1; ++i) {
+        if (bitIndex % 8 == 0) {
+            bitIndex += 15;
+        } else {
+            bitIndex -= 1;
+        }
+    }
+    return bitIndex;
+}
+
+static int motorolaLsbToMbsInternal(int startBitLsb, int length)
+{
+    int bitIndex = startBitLsb;
+    // 反向从 LSB 走 length-1 次更新，得到内部的 MSB startBit。
+    for (int i = 0; i < length - 1; ++i) {
+        if (bitIndex % 8 == 7) {
+            bitIndex -= 15;
+        } else {
+            bitIndex += 1;
+        }
+    }
+    return bitIndex;
+}
+
+static int displayStartBit(const CanSignal *signal)
+{
+    if (!signal) {
+        return 0;
+    }
+    const int startBit = signal->getStartBit();
+    const int length = signal->getLength();
+    if (signal->getByteOrder() == 0) {
+        return motorolaMsbToLsbDisplay(startBit, length);
+    }
+    // Intel：startBit 本身就是 LSB 口径
+    return startBit;
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , m_dbcParser(new DbcParser())
@@ -493,7 +538,7 @@ void MainWindow::populateMessageTree()
         for (CanSignal *signal : message->getSignals()) {
             QTreeWidgetItem *signalItem = new QTreeWidgetItem(item);
             signalItem->setText(0, signal->getName());
-            signalItem->setText(1, QString("Bit %1").arg(signal->getStartBit()));
+            signalItem->setText(1, QString("Bit %1").arg(displayStartBit(signal)));
             signalItem->setText(2, QString("%1 bits").arg(signal->getLength()));
             signalItem->setText(3, signal->getUnit());
             signalItem->setText(4, signal->getReceiversAsString());
@@ -518,6 +563,17 @@ void MainWindow::populateSignalTable(CanMessage *message)
     }
     
     QList<CanSignal*> signalList = message->getSignals();
+    // Default ordering: sort by StartBit (UI/CANoe口径)
+    std::sort(signalList.begin(), signalList.end(), [](const CanSignal *a, const CanSignal *b) {
+        const int sa = displayStartBit(a);
+        const int sb = displayStartBit(b);
+        if (sa != sb) {
+            return sa < sb;
+        }
+        const QString na = a ? a->getName() : QString();
+        const QString nb = b ? b->getName() : QString();
+        return na < nb;
+    });
     m_signalTable->setRowCount(signalList.size());
     
     for (int i = 0; i < signalList.size(); ++i) {
@@ -526,7 +582,7 @@ void MainWindow::populateSignalTable(CanMessage *message)
         m_isUpdatingSignalTable = true;
 
         auto *nameItem = new QTableWidgetItem(signal->getName());
-        auto *startBitItem = new QTableWidgetItem(QString::number(signal->getStartBit()));
+        auto *startBitItem = new QTableWidgetItem(QString::number(displayStartBit(signal)));
         auto *lengthItem = new QTableWidgetItem(QString::number(signal->getLength()));
         auto *factorItem = new QTableWidgetItem(QString::number(signal->getFactor()));
         auto *offsetItem = new QTableWidgetItem(QString::number(signal->getOffset()));
@@ -545,7 +601,7 @@ void MainWindow::populateSignalTable(CanMessage *message)
 
         // Store model pointer and original numeric values for validation/restore
         nameItem->setData(Qt::UserRole, QVariant::fromValue(static_cast<void *>(signal)));
-        m_signalTable->item(i, 1)->setData(Qt::UserRole, signal->getStartBit());
+        m_signalTable->item(i, 1)->setData(Qt::UserRole, displayStartBit(signal));
         m_signalTable->item(i, 2)->setData(Qt::UserRole, signal->getLength());
         m_signalTable->item(i, 3)->setData(Qt::UserRole, signal->getFactor());
         m_signalTable->item(i, 4)->setData(Qt::UserRole, signal->getOffset());
@@ -593,11 +649,15 @@ void MainWindow::onSignalCellChanged(QTableWidgetItem *item)
     case 1: { // Start Bit
         int value = text.toInt(&ok);
         if (!ok) {
-            item->setText(QString::number(signal->getStartBit()));
+            item->setText(QString::number(displayStartBit(signal)));
             m_statusLabel->setText(tr("无效的起始位：%1").arg(text));
         } else {
-            signal->setStartBit(value);
-            item->setData(Qt::UserRole, value);
+            // UI 展示的是 CANoe 口径：Motorola 的 StartBit 显示为 LSB
+            const int internalStartBit = (signal->getByteOrder() == 0)
+                ? motorolaLsbToMbsInternal(value, signal->getLength())
+                : value;
+            signal->setStartBit(internalStartBit);
+            item->setData(Qt::UserRole, value); // store display value
             markDirty();
         }
         break;
@@ -610,6 +670,12 @@ void MainWindow::onSignalCellChanged(QTableWidgetItem *item)
         } else {
             signal->setLength(value);
             item->setData(Qt::UserRole, value);
+            // Motorola 的展示 StartBit（LSB）会随长度变化，这里同步更新表格里的 Start Bit 单元格。
+            const int newDisplayStartBit = displayStartBit(signal);
+            if (QTableWidgetItem *startBitItem = m_signalTable->item(row, 1)) {
+                startBitItem->setText(QString::number(newDisplayStartBit));
+                startBitItem->setData(Qt::UserRole, newDisplayStartBit);
+            }
             markDirty();
         }
         break;
@@ -758,7 +824,8 @@ void MainWindow::populateSignalDetails(CanSignal *signal)
         return (quint64(1) << length) - 1;
     };
     const quint64 initialValue = static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength());
-    const QString byteOrderText = signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB";
+    // DBC 约定：@0 = Motorola（startBit 为 MSB），@1 = Intel（startBit 为 LSB）
+    const QString byteOrderText = signal->getByteOrder() == 0 ? "Motorola MSB" : "Intel LSB";
     const QString receivers = signal->getReceiversAsString().isEmpty() ? "N/A" : signal->getReceiversAsString();
     const QString sendType = signal->getSendType().isEmpty() ? "N/A" : signal->getSendType();
     const QString invalidValue = signal->getInvalidValueHex().isEmpty() ? "-" : signal->getInvalidValueHex();
@@ -784,7 +851,7 @@ void MainWindow::populateSignalDetails(CanSignal *signal)
         "Physical = Raw × %7 + %8\n"
         "Raw = (Physical - %8) ÷ %7"
     ).arg(signal->getName())
-     .arg(signal->getStartBit())
+     .arg(displayStartBit(signal))
      .arg(signal->getLength())
      .arg(byteOrderText)
      .arg(signal->isSigned() ? "Yes" : "No")

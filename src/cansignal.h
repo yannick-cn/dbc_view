@@ -64,7 +64,9 @@ private:
     QString m_name;
     int m_startBit;
     int m_length;
-    int m_byteOrder; // 0 = little endian, 1 = big endian
+    // DBC 约定：@0 = Motorola（startBit 为 MSB），@1 = Intel（startBit 为 LSB）
+    // 因此内部取值：0 -> Motorola，1 -> Intel
+    int m_byteOrder;
     bool m_isSigned;
     double m_factor;
     double m_offset;

@@ -17,6 +17,51 @@
 #include "miniz.h"
 
 namespace {
+
+// DBC Motorola 语义：@0 Motorola 时，DBC 的 startBit 表示 MSB 位位置。
+// CANoe 期望展示口径：Motorola 的 StartBit 展示为 LSB 位位置。
+// 本工程内部仍按 DBC startBit 语义存储，Excel 导入导出时做转换。
+static int motorolaMsbToLsbDisplay(int startBitMsb, int length)
+{
+    int bitIndex = startBitMsb;
+    for (int i = 0; i < length - 1; ++i) {
+        if (bitIndex % 8 == 0) {
+            bitIndex += 15;
+        } else {
+            bitIndex -= 1;
+        }
+    }
+    return bitIndex;
+}
+
+static int motorolaLsbToMbsInternal(int startBitLsb, int length)
+{
+    int bitIndex = startBitLsb;
+    for (int i = 0; i < length - 1; ++i) {
+        if (bitIndex % 8 == 7) {
+            bitIndex -= 15;
+        } else {
+            bitIndex += 1;
+        }
+    }
+    return bitIndex;
+}
+
+static int displayStartBit(const CanSignal *signal)
+{
+    if (!signal) {
+        return 0;
+    }
+    const int startBit = signal->getStartBit();
+    const int length = signal->getLength();
+    if (signal->getByteOrder() == 0) {
+        // Motorola
+        return motorolaMsbToLsbDisplay(startBit, length);
+    }
+    // Intel: startBit 本身就是 LSB
+    return startBit;
+}
+
 QStringList headerLabels()
 {
     return {
@@ -35,10 +80,9 @@ QStringList headerLabels()
         "Signal Name\n信号名称",
         "Signal Description\n信号描述",
         "Byte Order\n排列格式(Intel/Motorola)",
-        "Start Byte\n起始字节",
-        "Start Bit\n起始位",
-        "Signal Send Type\n信号发送类型",
+        "StartBit\n起始比特",
         "Signal Length (Bit)\n信号长度",
+        "Signal Send Type\n信号发送类型",
         "Date Type\n数据类型",
         "Resolution\n精度",
         "Offset\n偏移量",
@@ -878,7 +922,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writer.writeAttribute("min", QString::number(col));
         writer.writeAttribute("max", QString::number(col));
         QString w;
-        if (col <= 2 || col == 12 || col == 14 || col == 31) {
+        if (col <= 2 || col == 12 || col == 14 || col == 30) {
             w = QStringLiteral("22");
         } else if (col >= 3 && col <= 7) {
             w = QStringLiteral("11");
@@ -948,7 +992,18 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writeInlineStringCell(writer, currentRow, 12, 2, message->getComment());
         writer.writeEndElement();
 
-        const QList<CanSignal*> messageSignals = message->getSignals();
+        QList<CanSignal*> messageSignals = message->getSignals();
+        // Excel 导出 ordering: sort by StartBit (UI/CANoe口径)
+        std::sort(messageSignals.begin(), messageSignals.end(), [](const CanSignal *a, const CanSignal *b) {
+            const int sa = displayStartBit(a);
+            const int sb = displayStartBit(b);
+            if (sa != sb) {
+                return sa < sb;
+            }
+            const QString na = a ? a->getName() : QString();
+            const QString nb = b ? b->getName() : QString();
+            return na < nb;
+        });
 
         for (const CanSignal *signal : messageSignals) {
             if (!signal) {
@@ -967,24 +1022,27 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
             }
             writeInlineStringCell(writer, currentRow, 13, 3, signal->getName());
             writeInlineStringCell(writer, currentRow, 14, 3, signal->getDescription());
-            writeInlineStringCell(writer, currentRow, 15, 3, signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB");
-            writeNumericCell(writer, currentRow, 16, 3, signal->getStartBit() / 8);
-            writeNumericCell(writer, currentRow, 17, 3, signal->getStartBit() % 8);
+            // DBC 约定：@0 = Motorola（startBit 为 MSB），@1 = Intel（startBit 为 LSB）
+            writeInlineStringCell(writer, currentRow, 15, 3, signal->getByteOrder() == 0 ? "Motorola MSB" : "Intel LSB");
+            // Excel 只保留一个 StartBit 列：采用 CANoe 展示口径
+            // Motorola: 展示为 LSB；Intel: startBit 本身就是 LSB
+            writeNumericCell(writer, currentRow, 16, 3, displayStartBit(signal));
+            // 列顺序与 headerLabels 保持一致：Length 在 SendType 前
+            writeNumericCell(writer, currentRow, 17, 3, signal->getLength());
             writeInlineStringCell(writer, currentRow, 18, 3, signal->getSendType());
-            writeNumericCell(writer, currentRow, 19, 3, signal->getLength());
-            writeInlineStringCell(writer, currentRow, 20, 3, signal->isSigned() ? "signed" : "unsigned");
-            writeNumericCell(writer, currentRow, 21, 3, signal->getFactor());
-            writeNumericCell(writer, currentRow, 22, 3, signal->getOffset());
-            writeNumericCell(writer, currentRow, 23, 3, signal->getMin());
-            writeNumericCell(writer, currentRow, 24, 3, signal->getMax());
-            writeInlineStringCell(writer, currentRow, 25, 3, formatHex(physicalToRawMasked(signal, signal->getMin())));
-            writeInlineStringCell(writer, currentRow, 26, 3, formatHex(physicalToRawMasked(signal, signal->getMax())));
-            writeInlineStringCell(writer, currentRow, 27, 3,
+            writeInlineStringCell(writer, currentRow, 19, 3, signal->isSigned() ? "signed" : "unsigned");
+            writeNumericCell(writer, currentRow, 20, 3, signal->getFactor());
+            writeNumericCell(writer, currentRow, 21, 3, signal->getOffset());
+            writeNumericCell(writer, currentRow, 22, 3, signal->getMin());
+            writeNumericCell(writer, currentRow, 23, 3, signal->getMax());
+            writeInlineStringCell(writer, currentRow, 24, 3, formatHex(physicalToRawMasked(signal, signal->getMin())));
+            writeInlineStringCell(writer, currentRow, 25, 3, formatHex(physicalToRawMasked(signal, signal->getMax())));
+            writeInlineStringCell(writer, currentRow, 26, 3,
                 formatHex(static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength())));
-            writeInlineStringCell(writer, currentRow, 28, 3, signal->getInvalidValueHex());
-            writeInlineStringCell(writer, currentRow, 29, 3, signal->getInactiveValueHex());
-            writeInlineStringCell(writer, currentRow, 30, 3, signal->getUnit());
-            writeInlineStringCell(writer, currentRow, 31, 3, formatValueTable(signal->getValueTable()));
+            writeInlineStringCell(writer, currentRow, 27, 3, signal->getInvalidValueHex());
+            writeInlineStringCell(writer, currentRow, 28, 3, signal->getInactiveValueHex());
+            writeInlineStringCell(writer, currentRow, 29, 3, signal->getUnit());
+            writeInlineStringCell(writer, currentRow, 30, 3, formatValueTable(signal->getValueTable()));
             writer.writeEndElement();
         }
 
@@ -1580,34 +1638,50 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                 if (useNewLayout) {
                     signal->setReceivers(msg->getReceivers());
                     signal->setDescription(row.value(14));
+                    // Excel：Byte Order 列映射到 DBC 约定(@0 Motorola, @1 Intel)
+                    // 为兼容潜在旧表格格式，这里同时识别 intel/motorola 字样。
                     const QString byteOrder = row.value(15).toLower();
-                    signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
-                    signal->setStartBit(row.value(16).toInt() * 8 + row.value(17).toInt());
+                    if (byteOrder.contains("motorola")) {
+                        signal->setByteOrder(0);
+                    } else if (byteOrder.contains("intel")) {
+                        signal->setByteOrder(1);
+                    } else {
+                        // 未识别时保持默认（Intel）
+                        signal->setByteOrder(1);
+                    }
+                    // Excel 只保留一个 StartBit 列：采用 CANoe 展示口径
+                    // Motorola：展示为 LSB；内部仍存 DBC/MSB startBit，因此需要反向转换。
+                    const int startBitDisplay = row.value(16).toInt();
+                    const int length = row.value(17).toInt();
                     signal->setSendType(normalizeSendType(row.value(18).trimmed(), true));
-                    signal->setLength(row.value(19).toInt());
-                    const QString dataType = row.value(20).toLower();
+                    signal->setLength(length);
+                    const int internalStartBit = (signal->getByteOrder() == 0)
+                        ? motorolaLsbToMbsInternal(startBitDisplay, length)
+                        : startBitDisplay;
+                    signal->setStartBit(internalStartBit);
+                    const QString dataType = row.value(19).toLower();
                     signal->setSigned(dataType.contains("signed") && !dataType.contains("unsigned"));
-                    signal->setFactor(row.value(21).toDouble());
-                    signal->setOffset(row.value(22).toDouble());
-                    signal->setMin(row.value(23).toDouble());
-                    signal->setMax(row.value(24).toDouble());
-                    // Hex bus min/max from Excel (columns 25, 26)
+                    signal->setFactor(row.value(20).toDouble());
+                    signal->setOffset(row.value(21).toDouble());
+                    signal->setMin(row.value(22).toDouble());
+                    signal->setMax(row.value(23).toDouble());
+                    // Hex bus min/max from Excel (columns 24, 25)
                     bool rawMinOk = false;
                     bool rawMaxOk = false;
-                    const int rawMin = parseHexToInt(row.value(25), &rawMinOk);
-                    const int rawMax = parseHexToInt(row.value(26), &rawMaxOk);
+                    const int rawMin = parseHexToInt(row.value(24), &rawMinOk);
+                    const int rawMax = parseHexToInt(row.value(25), &rawMaxOk);
                     if (rawMinOk && rawMaxOk) {
                         signal->setRawRange(static_cast<double>(rawMin), static_cast<double>(rawMax));
                     } else {
                         signal->clearRawRange();
                     }
-                    signal->setUnit(row.value(30).trimmed());
+                    signal->setUnit(row.value(29).trimmed());
                     bool initOk = false;
-                    const quint64 init = parseHexToUInt64(row.value(27), &initOk);
+                    const quint64 init = parseHexToUInt64(row.value(26), &initOk);
                     signal->setInitialValue(initOk ? static_cast<double>(init) : 0.0);
-                    signal->setInvalidValueHex(row.value(28).trimmed());
-                    signal->setInactiveValueHex(row.value(29).trimmed());
-                    const QStringList valueLines = splitLines(row.value(31));
+                    signal->setInvalidValueHex(row.value(27).trimmed());
+                    signal->setInactiveValueHex(row.value(28).trimmed());
+                    const QStringList valueLines = splitLines(row.value(30));
                     if (!valueLines.isEmpty()) {
                         QMap<int, QString> valueTable;
                         for (const QString &line : valueLines) {
@@ -1622,8 +1696,15 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
                     }
                 } else {
                     signal->setDescription(row.value(8));
+                    // Excel：Byte Order 列映射到 DBC 约定(@0 Motorola, @1 Intel)
                     const QString byteOrder = row.value(9).toLower();
-                    signal->setByteOrder(byteOrder.contains("motorola") ? 1 : 0);
+                    if (byteOrder.contains("motorola")) {
+                        signal->setByteOrder(0);
+                    } else if (byteOrder.contains("intel")) {
+                        signal->setByteOrder(1);
+                    } else {
+                        signal->setByteOrder(1);
+                    }
                     signal->setStartBit(row.value(10).toInt() * 8 + row.value(11).toInt());
                     signal->setSendType(normalizeSendType(row.value(12).trimmed(), true));
                     signal->setLength(row.value(13).toInt());

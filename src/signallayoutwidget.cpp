@@ -43,6 +43,36 @@ const QList<QColor> kDefaultColors = {
 
 const int kSignalIndexRole = Qt::UserRole + 1;
 
+// DBC Motorola 语义：@0 Motorola 时，DBC 的 startBit 表示 MSB 位位置。
+// CANoe 显示口径：Motorola 的 StartBit 展示为 LSB 位位置。
+// 本工程内部仍按 DBC startBit 语义存储，界面显示时做转换。
+static int motorolaMsbToLsbDisplay(int startBitMsb, int length)
+{
+    int bitIndex = startBitMsb;
+    for (int i = 0; i < length - 1; ++i) {
+        if (bitIndex % 8 == 0) {
+            bitIndex += 15;
+        } else {
+            bitIndex -= 1;
+        }
+    }
+    return bitIndex;
+}
+
+static int displayStartBit(const CanSignal *signal)
+{
+    if (!signal) {
+        return 0;
+    }
+    const int startBit = signal->getStartBit();
+    const int length = signal->getLength();
+    if (signal->getByteOrder() == 0) { // Motorola
+        return motorolaMsbToLsbDisplay(startBit, length);
+    }
+    // Intel：startBit 本身就是 LSB
+    return startBit;
+}
+
 } // namespace
 
 SignalLayoutWidget::SignalLayoutWidget(QWidget *parent)
@@ -166,7 +196,8 @@ void SignalLayoutWidget::showSignalDetailDialog(CanSignal *signal)
         return (quint64(1) << length) - 1;
     };
     const quint64 initialValue = static_cast<quint64>(std::llround(signal->getInitialValue())) & maskForLength(signal->getLength());
-    const QString byteOrderText = signal->getByteOrder() == 0 ? "Intel LSB" : "Motorola MSB";
+    // DBC 约定：@0 = Motorola（startBit 为 MSB），@1 = Intel（startBit 为 LSB）
+    const QString byteOrderText = signal->getByteOrder() == 0 ? "Motorola MSB" : "Intel LSB";
     const QString receivers = signal->getReceiversAsString().isEmpty() ? "N/A" : signal->getReceiversAsString();
     const QString sendType = signal->getSendType().isEmpty() ? "N/A" : signal->getSendType();
     const QString invalidValue = signal->getInvalidValueHex().isEmpty() ? "-" : signal->getInvalidValueHex();
@@ -192,7 +223,7 @@ void SignalLayoutWidget::showSignalDetailDialog(CanSignal *signal)
         "Physical = Raw × %7 + %8\n"
         "Raw = (Physical - %8) ÷ %7"
     ).arg(signal->getName())
-     .arg(signal->getStartBit())
+     .arg(displayStartBit(signal))
      .arg(signal->getLength())
      .arg(byteOrderText)
      .arg(signal->isSigned() ? "Yes" : "No")
