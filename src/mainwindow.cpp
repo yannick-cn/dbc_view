@@ -15,6 +15,8 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <set>
+#include <vector>
 
 // DBC Motorola 语义：@0 Motorola 时，DBC 的 startBit 表示 MSB 位位置。
 // CANoe 期望展示口径：Motorola 的 StartBit 展示为对应的 LSB 位位置。
@@ -115,6 +117,7 @@ void MainWindow::setupUI()
     m_messageTree->setAlternatingRowColors(true);
     m_messageTree->setRootIsDecorated(false);
     m_messageTree->setSortingEnabled(true);
+    m_messageTree->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_messageTree->sortByColumn(0, Qt::AscendingOrder);
     m_messageTree->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
     m_messageTree->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -136,6 +139,7 @@ void MainWindow::setupUI()
         << "Min" << "Max" << "Unit");
     m_signalTable->setAlternatingRowColors(true);
     m_signalTable->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_signalTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_signalTable->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::SelectedClicked);
     m_signalTable->setContextMenuPolicy(Qt::CustomContextMenu);
     m_signalTable->horizontalHeader()->setStretchLastSection(true);
@@ -971,6 +975,12 @@ void MainWindow::onMessageTreeContextMenuRequested(const QPoint &pos)
     if (!item) {
         return;
     }
+    // If right-clicked item is not part of the current selection, switch selection to it.
+    if (!item->isSelected()) {
+        m_messageTree->clearSelection();
+        m_messageTree->setCurrentItem(item);
+        item->setSelected(true);
+    }
     QMenu menu(this);
     QAction *copyRow = menu.addAction(tr("复制为新的报文"));
     QAction *deleteRow = menu.addAction(tr("删除报文"));
@@ -978,7 +988,6 @@ void MainWindow::onMessageTreeContextMenuRequested(const QPoint &pos)
     if (chosen == copyRow) {
         copyMessageAsNew();
     } else if (chosen == deleteRow) {
-        m_messageTree->setCurrentItem(item);
         deleteMessage();
     }
 }
@@ -992,6 +1001,11 @@ void MainWindow::onSignalTableContextMenuRequested(const QPoint &pos)
     QMenu menu(this);
     QAction *copyRow = menu.addAction(tr("复制为新的信号"));
     QAction *deleteRow = menu.addAction(tr("删除信号"));
+    // If right-clicked row is not selected, switch selection to it.
+    if (!m_signalTable->item(row, 0)->isSelected()) {
+        m_signalTable->clearSelection();
+        m_signalTable->selectRow(row);
+    }
     QAction *chosen = menu.exec(m_signalTable->viewport()->mapToGlobal(pos));
     if (chosen == copyRow) {
         copySignalAsNew(row);
@@ -1005,18 +1019,25 @@ void MainWindow::copyMessageAsNew()
     if (!m_dbcParser) {
         return;
     }
-    QList<QTreeWidgetItem *> items = m_messageTree->selectedItems();
+    const QList<QTreeWidgetItem *> items = m_messageTree->selectedItems();
     if (items.isEmpty()) {
         return;
     }
-    QTreeWidgetItem *item = items.first();
-    if (item->parent() != nullptr) {
-        // 若选中的是信号行，则取父节点对应的报文
-        item = item->parent();
+
+    // 收集所有被选中的报文（若选中的是信号行，则映射到父报文）
+    std::set<CanMessage *> selectedMessages;
+    for (QTreeWidgetItem *it : items) {
+        if (!it) {
+            continue;
+        }
+        QTreeWidgetItem *msgItem = it->parent() != nullptr ? it->parent() : it;
+        void *ptr = msgItem->data(0, Qt::UserRole).value<void *>();
+        CanMessage *origMsg = static_cast<CanMessage *>(ptr);
+        if (origMsg) {
+            selectedMessages.insert(origMsg);
+        }
     }
-    void *ptr = item->data(0, Qt::UserRole).value<void *>();
-    CanMessage *origMsg = static_cast<CanMessage *>(ptr);
-    if (!origMsg) {
+    if (selectedMessages.empty()) {
         return;
     }
 
@@ -1028,32 +1049,144 @@ void MainWindow::copyMessageAsNew()
         }
     }
 
-    // 拷贝报文
-    CanMessage *msg = new CanMessage();
-    msg->setId(maxId + 1);
-    QString baseName = origMsg->getName();
-    if (baseName.isEmpty()) {
-        baseName = QStringLiteral("Message");
-    }
-    msg->setName(baseName + QStringLiteral("_Copy"));
-    msg->setLength(origMsg->getLength());
-    msg->setTransmitter(origMsg->getTransmitter());
-    msg->setCycleTime(origMsg->getCycleTime());
-    msg->setFrameFormat(origMsg->getFrameFormat());
-    msg->setSendType(origMsg->getSendType());
-    msg->setCycleTimeFast(origMsg->getCycleTimeFast());
-    msg->setNrOfRepetitions(origMsg->getNrOfRepetitions());
-    msg->setDelayTime(origMsg->getDelayTime());
-    msg->setComment(origMsg->getComment());
-    msg->setMessageType(origMsg->getMessageType());
-    msg->setReceivers(origMsg->getReceivers());
+    // 拷贝报文（批量）
+    quint32 nextId = maxId + 1;
+    int copyIndex = 1;
+    for (CanMessage *origMsg : selectedMessages) {
+        if (!origMsg) {
+            continue;
+        }
+        CanMessage *msg = new CanMessage();
+        msg->setId(nextId++);
 
-    for (CanSignal *origSig : origMsg->getSignals()) {
+        QString baseName = origMsg->getName();
+        if (baseName.isEmpty()) {
+            baseName = QStringLiteral("Message");
+        }
+        const QString suffix = selectedMessages.size() > 1
+            ? QStringLiteral("_Copy") + QString::number(copyIndex++)
+            : QStringLiteral("_Copy");
+        msg->setName(baseName + suffix);
+        msg->setLength(origMsg->getLength());
+        msg->setTransmitter(origMsg->getTransmitter());
+        msg->setCycleTime(origMsg->getCycleTime());
+        msg->setFrameFormat(origMsg->getFrameFormat());
+        msg->setSendType(origMsg->getSendType());
+        msg->setCycleTimeFast(origMsg->getCycleTimeFast());
+        msg->setNrOfRepetitions(origMsg->getNrOfRepetitions());
+        msg->setDelayTime(origMsg->getDelayTime());
+        msg->setComment(origMsg->getComment());
+        msg->setMessageType(origMsg->getMessageType());
+        msg->setReceivers(origMsg->getReceivers());
+
+        for (CanSignal *origSig : origMsg->getSignals()) {
+            if (!origSig) {
+                continue;
+            }
+            CanSignal *sig = new CanSignal();
+            sig->setName(origSig->getName());
+            sig->setStartBit(origSig->getStartBit());
+            sig->setLength(origSig->getLength());
+            sig->setByteOrder(origSig->getByteOrder());
+            sig->setSigned(origSig->isSigned());
+            sig->setFactor(origSig->getFactor());
+            sig->setOffset(origSig->getOffset());
+            sig->setMin(origSig->getMin());
+            sig->setMax(origSig->getMax());
+            sig->setUnit(origSig->getUnit());
+            sig->setReceivers(origSig->getReceivers());
+            sig->setDescription(origSig->getDescription());
+            sig->setSendType(origSig->getSendType());
+            sig->setInitialValue(origSig->getInitialValue());
+            sig->setInvalidValueHex(origSig->getInvalidValueHex());
+            sig->setInactiveValueHex(origSig->getInactiveValueHex());
+            sig->setValueTable(origSig->getValueTable());
+            if (origSig->hasRawRange()) {
+                sig->setRawRange(origSig->getRawMin(), origSig->getRawMax());
+            }
+            msg->addSignal(sig);
+        }
+
+        m_dbcParser->addMessage(msg);
+    }
+
+    populateMessageTree();
+    markDirty();
+}
+
+void MainWindow::copySignalAsNew(int row)
+{
+    if (!m_currentMessage) {
+        return;
+    }
+    // Shift 多选后：如果 row 在选中行集合里，则复制所有选中信号；否则只复制该 row。
+    std::set<int> selectedRows;
+    for (QTableWidgetItem *it : m_signalTable->selectedItems()) {
+        if (it) {
+            selectedRows.insert(it->row());
+        }
+    }
+    if (selectedRows.empty()) {
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    } else if (selectedRows.find(row) == selectedRows.end()) {
+        selectedRows.clear();
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    }
+
+    // 先收集原始信号指针，避免复制过程中刷新导致行索引变化
+    std::vector<CanSignal *> origSignals;
+    std::set<CanSignal *> origSet;
+    for (int r : selectedRows) {
+        if (r < 0 || r >= m_signalTable->rowCount()) {
+            continue;
+        }
+        QTableWidgetItem *nameItem = m_signalTable->item(r, 0);
+        if (!nameItem) {
+            continue;
+        }
+        void *ptr = nameItem->data(Qt::UserRole).value<void *>();
+        CanSignal *origSig = static_cast<CanSignal *>(ptr);
+        if (!origSig) {
+            continue;
+        }
+        if (origSet.insert(origSig).second) {
+            origSignals.push_back(origSig);
+        }
+    }
+    if (origSignals.empty()) {
+        return;
+    }
+
+    int copyIndex = 1;
+    for (CanSignal *origSig : origSignals) {
         if (!origSig) {
             continue;
         }
         CanSignal *sig = new CanSignal();
-        sig->setName(origSig->getName());
+
+        QString baseName = origSig->getName();
+        if (baseName.isEmpty()) {
+            baseName = QStringLiteral("Signal");
+        }
+
+        QString candidate = baseName + QStringLiteral("_Copy");
+        if (origSignals.size() > 1) {
+            candidate += QString::number(copyIndex++);
+        }
+        // 避免重名（同一报文内）
+        QString finalName = candidate;
+        int nameTry = 1;
+        while (m_currentMessage->getSignal(finalName) != nullptr) {
+            finalName = candidate + QStringLiteral("_") + QString::number(nameTry++);
+        }
+        sig->setName(finalName);
+
         sig->setStartBit(origSig->getStartBit());
         sig->setLength(origSig->getLength());
         sig->setByteOrder(origSig->getByteOrder());
@@ -1073,71 +1206,10 @@ void MainWindow::copyMessageAsNew()
         if (origSig->hasRawRange()) {
             sig->setRawRange(origSig->getRawMin(), origSig->getRawMax());
         }
-        msg->addSignal(sig);
+
+        m_currentMessage->addSignal(sig);
     }
 
-    m_dbcParser->addMessage(msg);
-    populateMessageTree();
-    markDirty();
-
-    // 选中新复制的报文（按 ID 查找）
-    const int topCount = m_messageTree->topLevelItemCount();
-    for (int i = 0; i < topCount; ++i) {
-        QTreeWidgetItem *it = m_messageTree->topLevelItem(i);
-        void *p = it->data(0, Qt::UserRole).value<void *>();
-        if (p == msg) {
-            m_messageTree->setCurrentItem(it);
-            break;
-        }
-    }
-}
-
-void MainWindow::copySignalAsNew(int row)
-{
-    if (!m_currentMessage) {
-        return;
-    }
-    if (row < 0 || row >= m_signalTable->rowCount()) {
-        return;
-    }
-
-    QTableWidgetItem *nameItem = m_signalTable->item(row, 0);
-    if (!nameItem) {
-        return;
-    }
-    void *ptr = nameItem->data(Qt::UserRole).value<void *>();
-    CanSignal *origSig = static_cast<CanSignal *>(ptr);
-    if (!origSig) {
-        return;
-    }
-
-    CanSignal *sig = new CanSignal();
-    QString baseName = origSig->getName();
-    if (baseName.isEmpty()) {
-        baseName = QStringLiteral("Signal");
-    }
-    sig->setName(baseName + QStringLiteral("_Copy"));
-    sig->setStartBit(origSig->getStartBit());
-    sig->setLength(origSig->getLength());
-    sig->setByteOrder(origSig->getByteOrder());
-    sig->setSigned(origSig->isSigned());
-    sig->setFactor(origSig->getFactor());
-    sig->setOffset(origSig->getOffset());
-    sig->setMin(origSig->getMin());
-    sig->setMax(origSig->getMax());
-    sig->setUnit(origSig->getUnit());
-    sig->setReceivers(origSig->getReceivers());
-    sig->setDescription(origSig->getDescription());
-    sig->setSendType(origSig->getSendType());
-    sig->setInitialValue(origSig->getInitialValue());
-    sig->setInvalidValueHex(origSig->getInvalidValueHex());
-    sig->setInactiveValueHex(origSig->getInactiveValueHex());
-    sig->setValueTable(origSig->getValueTable());
-    if (origSig->hasRawRange()) {
-        sig->setRawRange(origSig->getRawMin(), origSig->getRawMax());
-    }
-
-    m_currentMessage->addSignal(sig);
     populateMessageTree();
     populateSignalTable(m_currentMessage);
     m_signalLayout->setMessage(m_currentMessage);
@@ -1181,32 +1253,59 @@ void MainWindow::deleteMessage()
     if (!m_dbcParser) {
         return;
     }
+    // 批量删除：Shift 多选后，删除全部被选中的报文
+    const QList<QTreeWidgetItem *> items = m_messageTree->selectedItems();
+    if (items.isEmpty()) {
+        QTreeWidgetItem *cur = m_messageTree->currentItem();
+        if (!cur) {
+            return;
+        }
+        m_messageTree->clearSelection();
+        cur->setSelected(true);
+    }
 
-    QTreeWidgetItem *item = m_messageTree->currentItem();
-    if (!item) {
+    const QList<QTreeWidgetItem *> items2 = m_messageTree->selectedItems();
+    if (items2.isEmpty()) {
         return;
     }
 
-    if (item->parent() != nullptr) {
-        // If a signal is selected, delete its parent message only when explicitly selected
-        item = item->parent();
+    std::set<CanMessage *> selectedMessages;
+    QStringList nameList;
+    for (QTreeWidgetItem *it : items2) {
+        if (!it) continue;
+        QTreeWidgetItem *msgItem = it->parent() != nullptr ? it->parent() : it;
+        void *ptr = msgItem->data(0, Qt::UserRole).value<void *>();
+        CanMessage *message = static_cast<CanMessage *>(ptr);
+        if (!message) continue;
+        if (selectedMessages.insert(message).second) {
+            nameList.append(message->getName());
+        }
     }
-
-    void *ptr = item->data(0, Qt::UserRole).value<void *>();
-    CanMessage *message = static_cast<CanMessage *>(ptr);
-    if (!message) {
+    if (selectedMessages.empty()) {
         return;
     }
 
-    const auto ret = QMessageBox::question(this,
-                                           tr("删除报文"),
-                                           tr("确定要删除报文 \"%1\" 吗？此操作不可撤销。").arg(message->getName()));
+    QString preview;
+    int shown = 0;
+    for (const QString &n : nameList) {
+        if (shown >= 3) break;
+        if (!preview.isEmpty()) preview += "，";
+        preview += n;
+        ++shown;
+    }
+    const QString retText = tr("将删除 %1 个报文%2。此操作不可撤销。")
+        .arg(static_cast<int>(selectedMessages.size()))
+        .arg(preview.isEmpty() ? QString() : tr("（前几个：%1）").arg(preview));
+
+    const auto ret = QMessageBox::question(this, tr("删除报文"), retText);
     if (ret != QMessageBox::Yes) {
         return;
     }
 
-    m_dbcParser->removeMessage(message);
-    delete m_messageTree->takeTopLevelItem(m_messageTree->indexOfTopLevelItem(item));
+    for (CanMessage *m : selectedMessages) {
+        m_dbcParser->removeMessage(m);
+    }
+    populateMessageTree();
     clearViews();
     markDirty();
 }
@@ -1285,11 +1384,23 @@ void MainWindow::addSignal()
 
 void MainWindow::deleteSignal()
 {
-    if (!m_currentMessage || !m_currentSignal) {
+    if (!m_currentMessage) {
         return;
     }
-
-    deleteSignalAtRow(m_signalTable->currentRow());
+    int row = m_signalTable->currentRow();
+    if (row < 0) {
+        // 若当前行未设置但存在多选，取一个选中行来触发批量删除
+        for (QTableWidgetItem *it : m_signalTable->selectedItems()) {
+            if (it) {
+                row = it->row();
+                break;
+            }
+        }
+    }
+    if (row < 0) {
+        return;
+    }
+    deleteSignalAtRow(row);
 }
 
 void MainWindow::deleteSignalAtRow(int row)
@@ -1297,33 +1408,78 @@ void MainWindow::deleteSignalAtRow(int row)
     if (!m_currentMessage) {
         return;
     }
-    if (row < 0 || row >= m_signalTable->rowCount()) {
+
+    // Shift 多选后：如果 row 在选中行集合里，则删除所有选中信号；否则只删除该 row。
+    std::set<int> selectedRows;
+    for (QTableWidgetItem *it : m_signalTable->selectedItems()) {
+        if (it) {
+            selectedRows.insert(it->row());
+        }
+    }
+    if (selectedRows.empty()) {
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    } else if (selectedRows.find(row) == selectedRows.end()) {
+        selectedRows.clear();
+        if (row < 0 || row >= m_signalTable->rowCount()) {
+            return;
+        }
+        selectedRows.insert(row);
+    }
+
+    // 收集要删除的信号指针
+    std::vector<CanSignal *> sigsToDelete;
+    std::set<CanSignal *> sigSet;
+    for (int r : selectedRows) {
+        if (r < 0 || r >= m_signalTable->rowCount()) {
+            continue;
+        }
+        QTableWidgetItem *nameItem = m_signalTable->item(r, 0);
+        if (!nameItem) {
+            continue;
+        }
+        void *ptr = nameItem->data(Qt::UserRole).value<void *>();
+        CanSignal *sig = static_cast<CanSignal *>(ptr);
+        if (!sig) {
+            continue;
+        }
+        if (sigSet.insert(sig).second) {
+            sigsToDelete.push_back(sig);
+        }
+    }
+    if (sigsToDelete.empty()) {
         return;
     }
 
-    QTableWidgetItem *nameItem = m_signalTable->item(row, 0);
-    if (!nameItem) {
-        return;
+    // 确认提示（一次性）
+    QString preview;
+    int shown = 0;
+    for (CanSignal *s : sigsToDelete) {
+        if (!s) continue;
+        if (shown >= 3) break;
+        if (!preview.isEmpty()) preview += "，";
+        preview += s->getName();
+        ++shown;
     }
-    void *ptr = nameItem->data(Qt::UserRole).value<void *>();
-    CanSignal *sig = static_cast<CanSignal *>(ptr);
-    if (!sig) {
-        return;
-    }
-
-    const auto ret = QMessageBox::question(this,
-                                           tr("删除信号"),
-                                           tr("确定要删除信号 \"%1\" 吗？此操作不可撤销。").arg(sig->getName()));
+    const QString retText = tr("将删除 %1 个信号%2。此操作不可撤销。")
+        .arg(static_cast<int>(sigsToDelete.size()))
+        .arg(preview.isEmpty() ? QString() : tr("（前几个：%1）").arg(preview));
+    const auto ret = QMessageBox::question(this, tr("删除信号"), retText);
     if (ret != QMessageBox::Yes) {
         return;
     }
 
-    if (m_currentSignal == sig) {
-        m_currentSignal = nullptr;
+    // 实际删除
+    for (CanSignal *sig : sigsToDelete) {
+        if (!sig) continue;
+        if (m_currentSignal == sig) {
+            m_currentSignal = nullptr;
+        }
+        m_currentMessage->removeSignal(sig);
+        delete sig;
     }
-
-    m_currentMessage->removeSignal(sig);
-    delete sig;
 
     populateMessageTree();
     populateSignalTable(m_currentMessage);
