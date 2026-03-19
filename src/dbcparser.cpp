@@ -13,6 +13,18 @@ QRegularExpression makeRegex(const char *pattern)
     return QRegularExpression(QString::fromLatin1(pattern));
 }
 
+/** Undo escape() in dbcwriter for strings read from quoted DBC fields. */
+QString unescapeDbcQuotedString(const QString &value)
+{
+    QString result = value;
+    result.replace(QLatin1String("\\\\"), QLatin1String("\\"));
+    result.replace(QLatin1String("\\n"), QLatin1String("\n"));
+    result.replace(QLatin1String("\\r"), QLatin1String("\r"));
+    result.replace(QLatin1String("\\t"), QLatin1String("\t"));
+    result.replace(QLatin1String("\\\""), QLatin1String("\""));
+    return result;
+}
+
 QString normalizeFrameFormat(const QString &format)
 {
     if (format.compare("StandardCAN_FD", Qt::CaseInsensitive) == 0) {
@@ -151,7 +163,7 @@ bool DbcParser::parseLine(const QString &line)
         QRegularExpression regex = makeRegex("VERSION\\s+\"([^\"]*)\"");
         const QRegularExpressionMatch match = regex.match(line);
         if (match.hasMatch()) {
-            m_version = match.captured(1);
+            m_version = unescapeDbcQuotedString(match.captured(1));
         }
         return true;
     }
@@ -257,7 +269,7 @@ bool DbcParser::parseSignal(const QString &line)
     signal->setOffset(parseDouble(match.captured(7)));
     signal->setMin(parseDouble(match.captured(8)));
     signal->setMax(parseDouble(match.captured(9)));
-    signal->setUnit(match.captured(10));
+    signal->setUnit(unescapeDbcQuotedString(match.captured(10)));
 
     QString receiversStr = match.captured(11).trimmed();
     receiversStr.remove(';');
@@ -291,7 +303,8 @@ bool DbcParser::parseValueTable(const QString &line)
     QRegularExpressionMatchIterator it = valueRegex.globalMatch(match.captured(3));
     while (it.hasNext()) {
         const QRegularExpressionMatch valueMatch = it.next();
-        valueTable[valueMatch.captured(1).toInt()] = valueMatch.captured(2);
+        valueTable[valueMatch.captured(1).toInt()] =
+            unescapeDbcQuotedString(valueMatch.captured(2));
     }
     signal->setValueTable(valueTable);
     return true;
@@ -302,22 +315,14 @@ bool DbcParser::parseAttribute(const QString &line)
     QRegularExpression docTitleRegex = makeRegex("BA_\\s+\"DocumentTitle\"\\s+\"([^\"]*)\"");
     const QRegularExpressionMatch docTitleMatch = docTitleRegex.match(line);
     if (docTitleMatch.hasMatch()) {
-        QString value = docTitleMatch.captured(1);
-        value.replace(QLatin1String("\\\\"), QLatin1String("\\"));
-        value.replace(QLatin1String("\\n"), QLatin1String("\n"));
-        value.replace(QLatin1String("\\\""), QLatin1String("\""));
-        m_documentTitle = value;
+        m_documentTitle = unescapeDbcQuotedString(docTitleMatch.captured(1));
         return true;
     }
 
     QRegularExpression changeHistoryRegex = makeRegex("BA_\\s+\"ChangeHistory\"\\s+\"([^\"]*)\"");
     const QRegularExpressionMatch changeHistoryMatch = changeHistoryRegex.match(line);
     if (changeHistoryMatch.hasMatch()) {
-        QString value = changeHistoryMatch.captured(1);
-        value.replace(QLatin1String("\\\\"), QLatin1String("\\"));
-        value.replace(QLatin1String("\\n"), QLatin1String("\n"));
-        value.replace(QLatin1String("\\t"), QLatin1String("\t"));
-        value.replace(QLatin1String("\\\""), QLatin1String("\""));
+        QString value = unescapeDbcQuotedString(changeHistoryMatch.captured(1));
         const QStringList records = value.split(QLatin1Char('\n'), QString::SkipEmptyParts);
         for (const QString &record : records) {
             const QStringList fields = record.split(QLatin1Char('\t'));
@@ -447,7 +452,7 @@ bool DbcParser::parseComment(const QString &line)
     if (msgMatch.hasMatch()) {
         CanMessage *message = getMessage(msgMatch.captured(1).toUInt());
         if (message) {
-            message->setComment(msgMatch.captured(2));
+            message->setComment(unescapeDbcQuotedString(msgMatch.captured(2)));
         }
         return true;
     }
@@ -461,7 +466,7 @@ bool DbcParser::parseComment(const QString &line)
         }
         CanSignal *signal = message->getSignal(sigMatch.captured(2));
         if (signal) {
-            signal->setDescription(sigMatch.captured(3));
+            signal->setDescription(unescapeDbcQuotedString(sigMatch.captured(3)));
         }
         return true;
     }
@@ -502,7 +507,8 @@ bool DbcParser::parseGlobalValueTable(const QString &line)
     QRegularExpressionMatchIterator it = valueRegex.globalMatch(rest);
     while (it.hasNext()) {
         const QRegularExpressionMatch valueMatch = it.next();
-        valueTable[valueMatch.captured(1).toInt()] = valueMatch.captured(2);
+        valueTable[valueMatch.captured(1).toInt()] =
+            unescapeDbcQuotedString(valueMatch.captured(2));
     }
     m_globalValueTables.append(qMakePair(name, valueTable));
     return true;

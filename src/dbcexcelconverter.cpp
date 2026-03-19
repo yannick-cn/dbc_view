@@ -278,7 +278,7 @@ QByteArray generateStylesXml()
     writer.writeAttribute("borderId", "0");
     writer.writeAttribute("xfId", "0");
     writer.writeEndElement();
-    // 1 header
+    // 1 header (locked by default when sheet protection is enabled)
     writer.writeStartElement("xf");
     writer.writeAttribute("numFmtId", "0");
     writer.writeAttribute("fontId", "1");
@@ -295,7 +295,7 @@ QByteArray generateStylesXml()
     writer.writeAttribute("wrapText", "1");
     writer.writeEndElement();
     writer.writeEndElement();
-    // 2 message
+    // 2 message row style (explicitly unlocked so users can edit in Excel)
     writer.writeStartElement("xf");
     writer.writeAttribute("numFmtId", "0");
     writer.writeAttribute("fontId", "2");
@@ -306,13 +306,17 @@ QByteArray generateStylesXml()
     writer.writeAttribute("applyFont", "1");
     writer.writeAttribute("applyBorder", "1");
     writer.writeAttribute("applyAlignment", "1");
+    writer.writeAttribute("applyProtection", "1");
     writer.writeStartElement("alignment");
     writer.writeAttribute("horizontal", "center");
     writer.writeAttribute("vertical", "center");
     writer.writeAttribute("wrapText", "1");
     writer.writeEndElement();
+    writer.writeStartElement("protection");
+    writer.writeAttribute("locked", "0");
     writer.writeEndElement();
-    // 3 signal
+    writer.writeEndElement();
+    // 3 signal row style (explicitly unlocked)
     writer.writeStartElement("xf");
     writer.writeAttribute("numFmtId", "0");
     writer.writeAttribute("fontId", "0");
@@ -322,10 +326,14 @@ QByteArray generateStylesXml()
     writer.writeAttribute("applyFill", "1");
     writer.writeAttribute("applyBorder", "1");
     writer.writeAttribute("applyAlignment", "1");
+    writer.writeAttribute("applyProtection", "1");
     writer.writeStartElement("alignment");
     writer.writeAttribute("horizontal", "center");
     writer.writeAttribute("vertical", "center");
     writer.writeAttribute("wrapText", "1");
+    writer.writeEndElement();
+    writer.writeStartElement("protection");
+    writer.writeAttribute("locked", "0");
     writer.writeEndElement();
     writer.writeEndElement();
     // 4 cover title: center alignment, vertical center, wrap
@@ -860,6 +868,15 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeEndElement();
     writer.writeEndElement();
 
+    // Protect the sheet so that header cells (which use the default locked
+    // style) are not editable, while message/signal rows remain editable
+    // because their styles explicitly set locked=\"0\".
+    writer.writeStartElement("sheetProtection");
+    writer.writeAttribute("sheet", "1");
+    writer.writeAttribute("objects", "1");
+    writer.writeAttribute("scenarios", "1");
+    writer.writeEndElement();
+
     int totalRows = 1; // header
     for (const CanMessage *message : messages) {
         if (!message) {
@@ -1381,6 +1398,17 @@ bool isHeaderRowFirstColumn(const QString &col1, const QString &expectedFirst)
     return false;
 }
 
+// Remove whitespace from identifiers so that exported DBC message/signal
+// names never contain spaces (which are illegal in CANdb and cause
+// syntax errors in tools like CANoe). We only touch the in-memory name,
+// Excel 原始单元格内容保持不变。
+QString sanitizeIdentifier(const QString &name)
+{
+    QString result = name;
+    result.remove(QRegularExpression(QStringLiteral("\\s+")));
+    return result;
+}
+
 } // namespace
 
 void DbcExcelConverter::ImportResult::clear()
@@ -1551,11 +1579,13 @@ bool DbcExcelConverter::importFromExcel(const QString &filePath,
     bool useNewLayout = true;
 
     auto processRowIntoMerge = [&](const QMap<int, QString> &row, CanMessage **currentMessage) {
-        const QString messageName = row.value(1).trimmed();
+        const QString rawMessageName = row.value(1).trimmed();
+        const QString messageName = sanitizeIdentifier(rawMessageName);
         const int msgLenCol = useNewLayout ? 8 : 6;
         const int signalNameCol = useNewLayout ? 13 : 7;
         const QString msgLengthStr = row.value(msgLenCol).trimmed();
-        const QString signalName = row.value(signalNameCol).trimmed();
+        const QString rawSignalName = row.value(signalNameCol).trimmed();
+        const QString signalName = sanitizeIdentifier(rawSignalName);
         const bool isMessageRow = !msgLengthStr.isEmpty() && signalName.isEmpty();
         if (isMessageRow) {
             const QString idText = row.value(3).trimmed();

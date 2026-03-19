@@ -54,8 +54,13 @@ const QStringList kFrameFormats = {
 QString escape(const QString &text)
 {
     QString escaped = text;
-    escaped.replace('\\', "\\\\");
-    escaped.replace('"', "\\\"");
+    // Normalize line endings so we emit a single DBC escape per break.
+    escaped.replace(QStringLiteral("\r\n"), QStringLiteral("\n"));
+    escaped.replace(QLatin1Char('\r'), QLatin1Char('\n'));
+    escaped.replace(QLatin1Char('\\'), QStringLiteral("\\\\"));
+    escaped.replace(QLatin1Char('"'), QStringLiteral("\\\""));
+    escaped.replace(QLatin1Char('\n'), QStringLiteral("\\n"));
+    escaped.replace(QLatin1Char('\t'), QStringLiteral("\\t"));
     return escaped;
 }
 
@@ -179,7 +184,10 @@ bool DbcWriter::write(const QString &filePath,
     }
 
     QTextStream out(&file);
-    out.setCodec("UTF-8");
+    // Use a Chinese-compatible legacy encoding so that tools like CANoe
+    // on Windows correctly display comments/units instead of mojibake.
+    // GB18030 is a superset of GBK/GB2312 and is widely supported.
+    out.setCodec("GB18030");
 
     out << "VERSION \"" << escape(version) << "\"\n\n\n";
 
