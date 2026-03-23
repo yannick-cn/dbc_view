@@ -14,6 +14,7 @@
 #include <QDialogButtonBox>
 #include <QFormLayout>
 #include <QLineEdit>
+#include <QRadioButton>
 
 #include <QtGlobal>
 
@@ -68,6 +69,184 @@ static int displayStartBit(const CanSignal *signal)
     return startBit;
 }
 
+/** 与 Excel「Signal Value Description / 信号值描述」列一致：每行 0xRAW: 描述 */
+static QString formatValueTableCell(const QMap<int, QString> &valueTable)
+{
+    if (valueTable.isEmpty()) {
+        return QString();
+    }
+    QStringList lines;
+    for (auto it = valueTable.cbegin(); it != valueTable.cend(); ++it) {
+        const QString hexKey = QStringLiteral("0x%1")
+            .arg(static_cast<quint32>(static_cast<qint32>(it.key())), 0, 16)
+            .toUpper();
+        lines.append(QStringLiteral("%1: %2").arg(hexKey, it.value()));
+    }
+    return lines.join(QLatin1Char('\n'));
+}
+
+/** 解析多行值表（与详情页「应用」相同规则；键支持十进制或 0x 十六进制） */
+static bool parseValueTableMultiline(const QString &text, QMap<int, QString> *outMap, QString *errorMessage)
+{
+    if (!outMap) {
+        return false;
+    }
+    outMap->clear();
+    const QStringList lines = text.split(QLatin1Char('\n'));
+    int lineNumber = 0;
+    for (const QString &line : lines) {
+        ++lineNumber;
+        const QString trimmed = line.trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        const int colonPos = trimmed.indexOf(QLatin1Char(':'));
+        if (colonPos <= 0) {
+            if (errorMessage) {
+                *errorMessage = QStringLiteral("第 %1 行缺少冒号（格式应为 \"原始值: 描述\"）。").arg(lineNumber);
+            }
+            return false;
+        }
+        const QString rawStr = trimmed.left(colonPos).trimmed();
+        const QString desc = trimmed.mid(colonPos + 1).trimmed();
+        bool ok = false;
+        int raw = 0;
+        if (rawStr.startsWith(QLatin1String("0x"), Qt::CaseInsensitive)) {
+            raw = rawStr.mid(2).toInt(&ok, 16);
+        } else {
+            raw = rawStr.toInt(&ok, 10);
+        }
+        if (!ok) {
+            if (errorMessage) {
+                *errorMessage = QStringLiteral("第 %1 行的原始值 \"%2\" 不是有效整数。").arg(lineNumber).arg(rawStr);
+            }
+            return false;
+        }
+        (*outMap)[raw] = desc;
+    }
+    return true;
+}
+
+/** 十六进制字符 -> 0..15，非法返回 -1 */
+static int hexCharToInt(QChar c)
+{
+    const ushort u = c.unicode();
+    if (u >= '0' && u <= '9') {
+        return int(u - '0');
+    }
+    if (u >= 'A' && u <= 'F') {
+        return int(u - 'A' + 10);
+    }
+    if (u >= 'a' && u <= 'f') {
+        return int(u - 'a' + 10);
+    }
+    return -1;
+}
+
+/**
+ * 复制报文时生成新 CAN ID：把十六进制表示里「左起第 N 位」数字加 1（含向高位的进位）。
+ * @param oneBasedColumnFromLeft 从左数第几位（1 起）：2 -> 例 0x62A→0x63A；3 -> 例 0x62A→0x62B
+ */
+static quint32 canIdCopyIncrementHexDigitAtColumn(quint32 id, int oneBasedColumnFromLeft)
+{
+    if (oneBasedColumnFromLeft < 1) {
+        oneBasedColumnFromLeft = 2;
+    }
+    const int idx = oneBasedColumnFromLeft - 1; // 0-based index into hex string
+
+    QString hex = QString::number(id, 16).toUpper();
+    if (hex.size() < oneBasedColumnFromLeft) {
+        hex = hex.rightJustified(oneBasedColumnFromLeft, QLatin1Char('0'));
+    }
+    std::vector<int> nibbles;
+    nibbles.reserve(hex.size());
+    for (QChar c : hex) {
+        const int v = hexCharToInt(c);
+        if (v < 0) {
+            return id;
+        }
+        nibbles.push_back(v);
+    }
+    if (idx < 0 || idx >= static_cast<int>(nibbles.size())) {
+        return id;
+    }
+    int i = idx;
+    while (true) {
+        nibbles[static_cast<size_t>(i)] += 1;
+        if (nibbles[static_cast<size_t>(i)] <= 15) {
+            break;
+        }
+        nibbles[static_cast<size_t>(i)] -= 16;
+        if (i == 0) {
+            nibbles.insert(nibbles.begin(), 1);
+            break;
+        }
+        --i;
+    }
+    QString out;
+    out.reserve(static_cast<int>(nibbles.size()));
+    for (int v : nibbles) {
+        out.append(QLatin1Char("0123456789ABCDEF"[v]));
+    }
+    bool ok = false;
+    const qulonglong parsed = out.toULongLong(&ok, 16);
+    if (!ok || parsed > std::numeric_limits<quint32>::max()) {
+        return id;
+    }
+    return static_cast<quint32>(parsed);
+}
+
+/** 在 usedIds 中占位：按选定 hex 位 +1；冲突则重复应用，仍冲突则选最小未占用 ID */
+static quint32 allocateUniqueCopyMessageId(quint32 origId, std::set<quint32> &usedIds, int oneBasedHexColumn)
+{
+    quint32 candidate = canIdCopyIncrementHexDigitAtColumn(origId, oneBasedHexColumn);
+    int tries = 0;
+    const int kMaxTries = 0x1000000;
+    while (usedIds.count(candidate) && tries < kMaxTries) {
+        candidate = canIdCopyIncrementHexDigitAtColumn(candidate, oneBasedHexColumn);
+        ++tries;
+    }
+    if (usedIds.count(candidate)) {
+        quint32 c = 1;
+        while (usedIds.count(c)) {
+            ++c;
+        }
+        candidate = c;
+    }
+    usedIds.insert(candidate);
+    return candidate;
+}
+
+/** 复制为新报文时选择新 CAN ID 规则：左起第 2 位或第 3 位十六进制 +1 */
+static bool askCopyMessageNewIdDigitColumn(QWidget *parent, int *outOneBasedColumn)
+{
+    if (!outOneBasedColumn) {
+        return false;
+    }
+    QDialog dialog(parent);
+    dialog.setWindowTitle(QObject::tr("复制报文：新 CAN ID"));
+    dialog.setModal(true);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *radioSecond = new QRadioButton(
+        QObject::tr("十六进制左起第 2 位 +1（例：0x62A → 0x63A）"), &dialog);
+    auto *radioThird = new QRadioButton(
+        QObject::tr("十六进制左起第 3 位 +1（例：0x62A → 0x62B）"), &dialog);
+    radioSecond->setChecked(true);
+    layout->addWidget(radioSecond);
+    layout->addWidget(radioThird);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    buttons->button(QDialogButtonBox::Ok)->setText(QObject::tr("确定"));
+    buttons->button(QDialogButtonBox::Cancel)->setText(QObject::tr("取消"));
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    if (dialog.exec() != QDialog::Accepted) {
+        return false;
+    }
+    *outOneBasedColumn = radioThird->isChecked() ? 3 : 2;
+    return true;
+}
+
 static QString applyPrefixRule(const QString &name, const QString &newPrefix)
 {
     const QString trimmedPrefix = newPrefix.trimmed();
@@ -87,12 +266,15 @@ struct PrefixCopyOptions {
     QString prefix;
     bool applyToMessageName = true;
     bool applyToSignalNames = true;
+    /** 复制报文新 ID：十六进制从左数第几位 +1（2 或 3） */
+    int copyIdHexOneBasedColumn = 2;
 };
 
 static bool askPrefixCopyOptions(QWidget *parent,
                                 const QString &title,
                                 bool allowMessageOption,
-                                PrefixCopyOptions *out)
+                                PrefixCopyOptions *out,
+                                bool showNewCanIdRuleForCopy = false)
 {
     if (!out) {
         return false;
@@ -121,6 +303,18 @@ static bool askPrefixCopyOptions(QWidget *parent,
     layout->addWidget(applyMsg);
     layout->addWidget(applySig);
 
+    QRadioButton *radioSecond = nullptr;
+    QRadioButton *radioThird = nullptr;
+    if (showNewCanIdRuleForCopy && allowMessageOption) {
+        radioSecond = new QRadioButton(
+            QObject::tr("新 CAN ID：十六进制左起第 2 位 +1（例：0x62A → 0x63A）"), &dialog);
+        radioThird = new QRadioButton(
+            QObject::tr("新 CAN ID：十六进制左起第 3 位 +1（例：0x62A → 0x62B）"), &dialog);
+        radioSecond->setChecked(true);
+        layout->addWidget(radioSecond);
+        layout->addWidget(radioThird);
+    }
+
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     buttons->button(QDialogButtonBox::Ok)->setText(QObject::tr("确定"));
     buttons->button(QDialogButtonBox::Cancel)->setText(QObject::tr("取消"));
@@ -135,6 +329,9 @@ static bool askPrefixCopyOptions(QWidget *parent,
     out->prefix = prefixEdit->text().trimmed();
     out->applyToMessageName = allowMessageOption && applyMsg->isChecked();
     out->applyToSignalNames = applySig->isChecked();
+    out->copyIdHexOneBasedColumn = (showNewCanIdRuleForCopy && allowMessageOption && radioThird && radioThird->isChecked())
+        ? 3
+        : 2;
     return true;
 }
 
@@ -235,10 +432,11 @@ void MainWindow::setupUI()
     QVBoxLayout *signalLayout = new QVBoxLayout(m_signalGroup);
     
     m_signalTable = new QTableWidget(this);
-    m_signalTable->setColumnCount(8);
+    m_signalTable->setColumnCount(9);
     m_signalTable->setHorizontalHeaderLabels(QStringList()
         << "Name" << "Start Bit" << "Length" << "Factor" << "Offset"
-        << "Min" << "Max" << "Unit");
+        << "Min" << "Max" << "Unit"
+        << QStringLiteral("Signal Value Description"));
     m_signalTable->setAlternatingRowColors(true);
     m_signalTable->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_signalTable->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -692,6 +890,8 @@ void MainWindow::populateSignalTable(CanMessage *message)
         auto *minItem = new QTableWidgetItem(QString::number(signal->getMin()));
         auto *maxItem = new QTableWidgetItem(QString::number(signal->getMax()));
         auto *unitItem = new QTableWidgetItem(signal->getUnit());
+        auto *valueDescItem = new QTableWidgetItem(formatValueTableCell(signal->getValueTable()));
+        valueDescItem->setTextAlignment(Qt::AlignTop | Qt::AlignLeft);
 
         m_signalTable->setItem(i, 0, nameItem);
         m_signalTable->setItem(i, 1, startBitItem);
@@ -701,6 +901,7 @@ void MainWindow::populateSignalTable(CanMessage *message)
         m_signalTable->setItem(i, 5, minItem);
         m_signalTable->setItem(i, 6, maxItem);
         m_signalTable->setItem(i, 7, unitItem);
+        m_signalTable->setItem(i, 8, valueDescItem);
 
         // Store model pointer and original numeric values for validation/restore
         nameItem->setData(Qt::UserRole, QVariant::fromValue(static_cast<void *>(signal)));
@@ -835,6 +1036,26 @@ void MainWindow::onSignalCellChanged(QTableWidgetItem *item)
         signal->setUnit(text);
         markDirty();
         break;
+    case 8: { // Signal Value Description / 值表
+        QMap<int, QString> table;
+        QString err;
+        if (!parseValueTableMultiline(item->text(), &table, &err)) {
+            QMessageBox::warning(this, tr("值表解析错误"), err);
+            m_isUpdatingSignalTable = true;
+            item->setText(formatValueTableCell(signal->getValueTable()));
+            m_isUpdatingSignalTable = false;
+        } else {
+            signal->setValueTable(table);
+            m_isUpdatingSignalTable = true;
+            item->setText(formatValueTableCell(table));
+            m_isUpdatingSignalTable = false;
+            markDirty();
+            if (m_currentSignal == signal) {
+                populateSignalDetails(signal);
+            }
+        }
+        break;
+    }
     default:
         break;
     }
@@ -971,16 +1192,12 @@ void MainWindow::populateSignalDetails(CanSignal *signal)
     
     m_signalDetails->setPlainText(details);
     
-    // Value table
+    // Value table（与 Excel / 信号表列「信号值描述」一致：0xRAW: 描述）
     QMap<int, QString> valueTable = signal->getValueTable();
     if (valueTable.isEmpty()) {
         m_valueTable->setPlainText("No value table defined for this signal.");
     } else {
-        QString valueTableText;
-        for (auto it = valueTable.begin(); it != valueTable.end(); ++it) {
-            valueTableText += QString("%1: %2\n").arg(it.key()).arg(it.value());
-        }
-        m_valueTable->setPlainText(valueTableText);
+        m_valueTable->setPlainText(formatValueTableCell(valueTable));
     }
     m_applyValueTableButton->setEnabled(true);
 }
@@ -991,37 +1208,34 @@ void MainWindow::applyValueTableChanges()
         return;
     }
 
-    const QString text = m_valueTable->toPlainText();
-    const QStringList lines = text.split(QLatin1Char('\n'));
     QMap<int, QString> table;
-
-    int lineNumber = 0;
-    for (const QString &line : lines) {
-        ++lineNumber;
-        const QString trimmed = line.trimmed();
-        if (trimmed.isEmpty()) {
-            continue;
-        }
-        const int colonPos = trimmed.indexOf(QLatin1Char(':'));
-        if (colonPos <= 0) {
-            QMessageBox::warning(this, tr("值表解析错误"),
-                                 tr("第 %1 行缺少冒号（格式应为 \"原始值: 描述\"）。").arg(lineNumber));
-            return;
-        }
-        const QString rawStr = trimmed.left(colonPos).trimmed();
-        const QString desc = trimmed.mid(colonPos + 1).trimmed();
-        bool ok = false;
-        const int raw = rawStr.toInt(&ok);
-        if (!ok) {
-            QMessageBox::warning(this, tr("值表解析错误"),
-                                 tr("第 %1 行的原始值 \"%2\" 不是有效整数。").arg(lineNumber).arg(rawStr));
-            return;
-        }
-        table[raw] = desc;
+    QString err;
+    if (!parseValueTableMultiline(m_valueTable->toPlainText(), &table, &err)) {
+        QMessageBox::warning(this, tr("值表解析错误"), err);
+        return;
     }
 
     m_currentSignal->setValueTable(table);
     populateSignalDetails(m_currentSignal);
+    // 同步信号表中新列
+    if (m_currentMessage) {
+        for (int r = 0; r < m_signalTable->rowCount(); ++r) {
+            QTableWidgetItem *nameItem = m_signalTable->item(r, 0);
+            if (!nameItem) {
+                continue;
+            }
+            void *p = nameItem->data(Qt::UserRole).value<void *>();
+            if (static_cast<CanSignal *>(p) != m_currentSignal) {
+                continue;
+            }
+            m_isUpdatingSignalTable = true;
+            if (QTableWidgetItem *vd = m_signalTable->item(r, 8)) {
+                vd->setText(formatValueTableCell(table));
+            }
+            m_isUpdatingSignalTable = false;
+            break;
+        }
+    }
     m_statusLabel->setText(tr("值表已更新"));
     markDirty();
 }
@@ -1152,23 +1366,27 @@ void MainWindow::copyMessageAsNew()
         return;
     }
 
-    // 计算新的唯一 ID
-    quint32 maxId = 0;
-    for (CanMessage *msg : m_dbcParser->getMessages()) {
-        if (msg && msg->getId() > maxId) {
-            maxId = msg->getId();
+    int idDigitColumn = 2;
+    if (!askCopyMessageNewIdDigitColumn(this, &idDigitColumn)) {
+        return;
+    }
+
+    // 新 ID：按所选「左起第 2 / 3 位」十六进制 +1；冲突则继续套规则或选最小空闲 ID
+    std::set<quint32> usedIds;
+    for (CanMessage *m : m_dbcParser->getMessages()) {
+        if (m) {
+            usedIds.insert(m->getId());
         }
     }
 
     // 拷贝报文（批量）
-    quint32 nextId = maxId + 1;
     int copyIndex = 1;
     for (CanMessage *origMsg : selectedMessages) {
         if (!origMsg) {
             continue;
         }
         CanMessage *msg = new CanMessage();
-        msg->setId(nextId++);
+        msg->setId(allocateUniqueCopyMessageId(origMsg->getId(), usedIds, idDigitColumn));
 
         QString baseName = origMsg->getName();
         if (baseName.isEmpty()) {
@@ -1232,7 +1450,7 @@ void MainWindow::copyMessageWithPrefix()
     }
 
     PrefixCopyOptions opt;
-    if (!askPrefixCopyOptions(this, tr("复制并修改前缀（报文/信号）"), true, &opt)) {
+    if (!askPrefixCopyOptions(this, tr("复制并修改前缀（报文/信号）"), true, &opt, true)) {
         return;
     }
     if (!opt.applyToMessageName && !opt.applyToSignalNames) {
@@ -1260,11 +1478,10 @@ void MainWindow::copyMessageWithPrefix()
         return;
     }
 
-    // Unique ID
-    quint32 maxId = 0;
-    for (CanMessage *msg : m_dbcParser->getMessages()) {
-        if (msg && msg->getId() > maxId) {
-            maxId = msg->getId();
+    std::set<quint32> usedIds;
+    for (CanMessage *m : m_dbcParser->getMessages()) {
+        if (m) {
+            usedIds.insert(m->getId());
         }
     }
 
@@ -1276,14 +1493,13 @@ void MainWindow::copyMessageWithPrefix()
         }
     }
 
-    quint32 nextId = maxId + 1;
     for (CanMessage *origMsg : selectedMessages) {
         if (!origMsg) {
             continue;
         }
 
         CanMessage *msg = new CanMessage();
-        msg->setId(nextId++);
+        msg->setId(allocateUniqueCopyMessageId(origMsg->getId(), usedIds, opt.copyIdHexOneBasedColumn));
 
         const QString baseMsgName = origMsg->getName().isEmpty() ? QStringLiteral("Message") : origMsg->getName();
         QString newMsgName = opt.applyToMessageName ? applyPrefixRule(baseMsgName, opt.prefix) : baseMsgName;

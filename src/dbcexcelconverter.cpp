@@ -201,7 +201,7 @@ QByteArray generateStylesXml()
     writer.writeEndElement(); // fonts
 
     writer.writeStartElement("fills");
-    writer.writeAttribute("count", "5");
+    writer.writeAttribute("count", "6");
     // Fill 0 - required default
     writer.writeStartElement("fill");
     writer.writeEmptyElement("patternFill");
@@ -230,10 +230,20 @@ QByteArray generateStylesXml()
     writeSolidFill(QStringLiteral("FF0096D6")); // Header fill
     writeSolidFill(QStringLiteral("FFCCE7F5")); // Message fill
     writeSolidFill(QStringLiteral("FFFFFFFF")); // Signal fill
+    writeSolidFill(QStringLiteral("FFD9D9D9")); // Gray: 第31列起占位区背景
     writer.writeEndElement(); // fills
 
+    auto writeGrayEdge = [&writer](const char *side) {
+        writer.writeStartElement(side);
+        writer.writeAttribute("style", "thin");
+        writer.writeStartElement("color");
+        writer.writeAttribute("rgb", "FFD9D9D9");
+        writer.writeEndElement();
+        writer.writeEndElement();
+    };
+
     writer.writeStartElement("borders");
-    writer.writeAttribute("count", "2");
+    writer.writeAttribute("count", "3");
     writer.writeStartElement("border");
     writer.writeEmptyElement("left");
     writer.writeEmptyElement("right");
@@ -256,6 +266,14 @@ QByteArray generateStylesXml()
     writer.writeEndElement();
     writer.writeEmptyElement("diagonal");
     writer.writeEndElement();
+    // 边框与背景同色（FFD9D9D9），格线视觉上消失
+    writer.writeStartElement("border");
+    writeGrayEdge("left");
+    writeGrayEdge("right");
+    writeGrayEdge("top");
+    writeGrayEdge("bottom");
+    writer.writeEmptyElement("diagonal");
+    writer.writeEndElement();
     writer.writeEndElement();
 
     writer.writeStartElement("cellStyleXfs");
@@ -269,7 +287,7 @@ QByteArray generateStylesXml()
     writer.writeEndElement();
 
     writer.writeStartElement("cellXfs");
-    writer.writeAttribute("count", "5");
+    writer.writeAttribute("count", "6");
     // 0 default
     writer.writeStartElement("xf");
     writer.writeAttribute("numFmtId", "0");
@@ -348,6 +366,26 @@ QByteArray generateStylesXml()
     writer.writeAttribute("horizontal", "center");
     writer.writeAttribute("vertical", "center");
     writer.writeAttribute("wrapText", "1");
+    writer.writeEndElement();
+    writer.writeEndElement();
+    // 5 第31列起占位：灰底 + 同色细边框（borderId 2）
+    writer.writeStartElement("xf");
+    writer.writeAttribute("numFmtId", "0");
+    writer.writeAttribute("fontId", "0");
+    writer.writeAttribute("fillId", "5");
+    writer.writeAttribute("borderId", "2");
+    writer.writeAttribute("xfId", "0");
+    writer.writeAttribute("applyFill", "1");
+    writer.writeAttribute("applyBorder", "1");
+    writer.writeAttribute("applyAlignment", "1");
+    writer.writeAttribute("applyProtection", "1");
+    writer.writeStartElement("alignment");
+    writer.writeAttribute("horizontal", "center");
+    writer.writeAttribute("vertical", "center");
+    writer.writeAttribute("wrapText", "1");
+    writer.writeEndElement();
+    writer.writeStartElement("protection");
+    writer.writeAttribute("locked", "1");
     writer.writeEndElement();
     writer.writeEndElement();
     writer.writeEndElement();
@@ -852,7 +890,10 @@ static QString sanitizeSheetName(const QString &name)
 QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QString &busType, bool withFreezePanes)
 {
     const QStringList headers = headerLabels();
-    const int columnCount = headers.size();
+    const int dataColumnCount = headers.size(); // 1..30 为有效列（末列「信号值描述」为第30列）
+    // 有效区外：右侧、下方整片铺灰（导入仍只认前 dataColumnCount 列）
+    const int sheetMaxColumn = 100;
+    const int kGrayPadRowsBelow = 500;
 
     QByteArray data;
     QXmlStreamWriter writer(&data);
@@ -868,15 +909,6 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeEndElement();
     writer.writeEndElement();
 
-    // Protect the sheet so that header cells (which use the default locked
-    // style) are not editable, while message/signal rows remain editable
-    // because their styles explicitly set locked=\"0\".
-    writer.writeStartElement("sheetProtection");
-    writer.writeAttribute("sheet", "1");
-    writer.writeAttribute("objects", "1");
-    writer.writeAttribute("scenarios", "1");
-    writer.writeEndElement();
-
     int totalRows = 1; // header
     for (const CanMessage *message : messages) {
         if (!message) {
@@ -888,9 +920,10 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     if (totalRows < 1) {
         totalRows = 1;
     }
+    const int sheetMaxRow = totalRows + kGrayPadRowsBelow;
 
     writer.writeStartElement("dimension");
-    writer.writeAttribute("ref", QString("A1:%1%2").arg(columnName(columnCount)).arg(totalRows));
+    writer.writeAttribute("ref", QString("A1:%1%2").arg(columnName(sheetMaxColumn)).arg(sheetMaxRow));
     writer.writeEndElement();
 
     writer.writeStartElement("sheetViews");
@@ -934,12 +967,14 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeEndElement();
 
     writer.writeStartElement("cols");
-    for (int col = 1; col <= columnCount; ++col) {
+    for (int col = 1; col <= sheetMaxColumn; ++col) {
         writer.writeStartElement("col");
         writer.writeAttribute("min", QString::number(col));
         writer.writeAttribute("max", QString::number(col));
         QString w;
-        if (col <= 2 || col == 12 || col == 14 || col == 30) {
+        if (col > dataColumnCount) {
+            w = QStringLiteral("8");
+        } else if (col <= 2 || col == 12 || col == 14 || col == 30) {
             w = QStringLiteral("22");
         } else if (col >= 3 && col <= 7) {
             w = QStringLiteral("11");
@@ -960,6 +995,16 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
 
     int currentRow = 1;
     const int messageSegmentColCount = 12;
+    // 与 generateStylesXml 中 cellXfs 下标一致：第31列起灰区（底/边框同色）
+    const int kGrayPadCellStyleId = 5;
+
+    // 有效行内：仅第 dataColumnCount 列以右为灰（第1–30列为协议编辑区）
+    auto writeGrayPadRightOfValidColumns = [&](int row) {
+        for (int c = dataColumnCount + 1; c <= sheetMaxColumn; ++c) {
+            writeStyledEmptyCell(writer, row, c, kGrayPadCellStyleId);
+        }
+    };
+
     QList<QString> dataSheetMerges;
 
     writer.writeStartElement("row");
@@ -968,9 +1013,10 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
     writer.writeAttribute("customFormat", "1");
     writer.writeAttribute("ht", "30");
     writer.writeAttribute("customHeight", "1");
-    for (int col = 1; col <= columnCount; ++col) {
+    for (int col = 1; col <= dataColumnCount; ++col) {
         writeInlineStringCell(writer, currentRow, col, 1, headers.at(col - 1));
     }
+    writeGrayPadRightOfValidColumns(currentRow);
     writer.writeEndElement();
 
     for (const CanMessage *message : messages) {
@@ -1007,6 +1053,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         writeNumericCell(writer, currentRow, 10, 2, message->getNrOfRepetitions());
         writeNumericCell(writer, currentRow, 11, 2, message->getDelayTime());
         writeInlineStringCell(writer, currentRow, 12, 2, message->getComment());
+        writeGrayPadRightOfValidColumns(currentRow);
         writer.writeEndElement();
 
         QList<CanSignal*> messageSignals = message->getSignals();
@@ -1060,6 +1107,7 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
             writeInlineStringCell(writer, currentRow, 28, 3, signal->getInactiveValueHex());
             writeInlineStringCell(writer, currentRow, 29, 3, signal->getUnit());
             writeInlineStringCell(writer, currentRow, 30, 3, formatValueTable(signal->getValueTable()));
+            writeGrayPadRightOfValidColumns(currentRow);
             writer.writeEndElement();
         }
 
@@ -1072,6 +1120,16 @@ QByteArray generateWorksheetXml(const QList<CanMessage*> &messages, const QStrin
         }
 
         // Outline metadata is encoded via row attributes above; Excel will expose group controls automatically.
+    }
+
+    // 有效行之下：整行（含第1–列）全部铺灰，表示无协议数据
+    for (int r = currentRow + 1; r <= sheetMaxRow; ++r) {
+        writer.writeStartElement("row");
+        writer.writeAttribute("r", QString::number(r));
+        for (int c = 1; c <= sheetMaxColumn; ++c) {
+            writeStyledEmptyCell(writer, r, c, kGrayPadCellStyleId);
+        }
+        writer.writeEndElement();
     }
 
     writer.writeEndElement();
