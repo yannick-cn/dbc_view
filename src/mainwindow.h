@@ -126,6 +126,8 @@ private:
     void createSnapshotFromCurrent();
     void restoreSnapshotToCurrent();
     void markDirty();
+    /** Same as Ctrl+S snapshot commit: refresh m_saved* from parser, clear dirty (no disk write). */
+    void applySaveSnapshot();
 };
 
 #endif // MAINWINDOW_H

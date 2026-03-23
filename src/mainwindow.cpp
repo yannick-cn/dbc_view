@@ -346,8 +346,7 @@ void MainWindow::setupMenuBar()
     QAction *delSigAction = new QAction(tr("Delete Signal"), this);
 
     connect(saveAction, &QAction::triggered, this, [this]() {
-        createSnapshotFromCurrent();
-        m_isDirty = false;
+        applySaveSnapshot();
         m_statusLabel->setText(tr("已保存当前修改"));
     });
     connect(revertAction, &QAction::triggered, this, [this]() {
@@ -417,8 +416,7 @@ void MainWindow::openFile()
         populateMessageTree();
         clearViews();
         showValidationErrorsIfAny();
-        createSnapshotFromCurrent();
-        m_isDirty = false;
+        applySaveSnapshot();
     } else {
         loadDbcFile(fileName);
     }
@@ -612,8 +610,7 @@ void MainWindow::loadDbcFile(const QString &filePath)
         populateMessageTree();
         clearViews();
         showValidationErrorsIfAny();
-        createSnapshotFromCurrent();
-        m_isDirty = false;
+        applySaveSnapshot();
     } else {
         QMessageBox::critical(this, "Error", "Failed to parse DBC file!");
         m_statusLabel->setText("Error loading file");
@@ -2110,6 +2107,12 @@ void MainWindow::onMessageTreeItemChanged(QTreeWidgetItem *item, int column)
     m_isUpdatingMessageTree = false;
 }
 
+void MainWindow::applySaveSnapshot()
+{
+    createSnapshotFromCurrent();
+    m_isDirty = false;
+}
+
 void MainWindow::markDirty()
 {
     if (!m_isDirty) {
@@ -2303,6 +2306,7 @@ void MainWindow::dropEvent(QDropEvent *event)
                 populateMessageTree();
                 clearViews();
                 showValidationErrorsIfAny();
+                applySaveSnapshot();
                 event->acceptProposedAction();
                 return;
             }

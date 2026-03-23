@@ -1473,6 +1473,21 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
         QList<CanMessage*> sheetMessages = (splitByEcu && !nodes.isEmpty())
             ? messagesForNode(messages, nodes.at(i))
             : messages;
+        // Excel：报文（及下属信号行）按 CAN ID 从小到大排列
+        std::stable_sort(sheetMessages.begin(), sheetMessages.end(),
+            [](const CanMessage *a, const CanMessage *b) {
+                if (!a || !b) {
+                    return a != nullptr && b == nullptr;
+                }
+                const quint32 idA = a->getId();
+                const quint32 idB = b->getId();
+                if (idA != idB) {
+                    return idA < idB;
+                }
+                const QString na = a->getName();
+                const QString nb = b->getName();
+                return na < nb;
+            });
         const QString path = QStringLiteral("xl/worksheets/sheet%1.xml").arg(i + 3);
         entries.append({path, generateWorksheetXml(sheetMessages, busType, (i == 0))});
     }
