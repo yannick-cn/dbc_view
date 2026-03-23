@@ -146,12 +146,19 @@ QString fallbackNode(const QStringList &nodes)
     return nodes.isEmpty() ? QStringLiteral("Vector__XXX") : nodes.first();
 }
 
-QString joinReceivers(const QStringList &receivers, const QString &fallback)
+/** CANoe/Vector：SG_ 行末尾为接收节点；不得包含发送节点，否则该 ECU 会同时出现在 TX 与 RX。 */
+QStringList receiversExcludingTransmitter(const QStringList &receivers, const QString &transmitter)
 {
-    if (!receivers.isEmpty()) {
-        return receivers.join(',');
+    if (transmitter.isEmpty()) {
+        return receivers;
     }
-    return fallback;
+    QStringList out;
+    for (const QString &r : receivers) {
+        if (r.compare(transmitter, Qt::CaseInsensitive) != 0) {
+            out.append(r);
+        }
+    }
+    return out;
 }
 
 QStringList ensureNode(const QStringList &nodes, const QString &node)
@@ -256,18 +263,26 @@ bool DbcWriter::write(const QString &filePath,
         out << "\nBO_ " << message->getId() << ' ' << message->getName() << ": "
             << message->getLength() << ' ' << transmitter << "\n";
 
-        const QStringList msgReceivers = message->getReceivers();
-        const QString receiverListForSignal = msgReceivers.isEmpty()
-            ? transmitter
-            : joinReceivers(msgReceivers, QString());
+        const QStringList msgReceivers =
+            receiversExcludingTransmitter(message->getReceivers(), transmitter);
+        // 无接收方时勿填发送方（否则 CANoe 把该报文算进此节点的 RX）；用占位节点
+        const QString messageReceiversJoined = msgReceivers.isEmpty()
+            ? QString()
+            : msgReceivers.join(QLatin1Char(','));
+        const QString fallbackReceiversForSignal = msgReceivers.isEmpty()
+            ? QStringLiteral("Vector__XXX")
+            : messageReceiversJoined;
 
         for (CanSignal *signal : message->getSignals()) {
             if (!signal) {
                 continue;
             }
             const QString sign = signal->isSigned() ? "-" : "+";
-            const QString receivers =
-                joinReceivers(signal->getReceivers(), receiverListForSignal);
+            const QStringList sigRx =
+                receiversExcludingTransmitter(signal->getReceivers(), transmitter);
+            const QString receivers = !sigRx.isEmpty()
+                ? sigRx.join(QLatin1Char(','))
+                : fallbackReceiversForSignal;
 
             out << " SG_ " << signal->getName() << " : "
                 << signal->getStartBit() << '|' << signal->getLength()
@@ -282,13 +297,8 @@ bool DbcWriter::write(const QString &filePath,
         }
     }
 
-    for (CanMessage *message : messages) {
-        if (!message) continue;
-        const QStringList msgReceivers = message->getReceivers();
-        if (!msgReceivers.isEmpty()) {
-            out << "BO_TX_BU_ " << message->getId() << " : " << joinReceivers(msgReceivers, QString()) << ";\n";
-        }
-    }
+    // 注意：BO_TX_BU_ 在 Vector DBC 中表示「可发送该报文的节点」，不是接收方。
+    // 此前把 RX 列表写入会导致 CANoe 中 TX/RX 列表错乱；单发送方已由 BO_ 行末字段表达，此处不再输出 BO_TX_BU_。
 
     out << '\n';
 

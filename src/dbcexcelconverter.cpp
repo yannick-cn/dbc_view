@@ -1547,7 +1547,8 @@ bool DbcExcelConverter::exportToExcel(const QString &filePath,
                 return na < nb;
             });
         const QString path = QStringLiteral("xl/worksheets/sheet%1.xml").arg(i + 3);
-        entries.append({path, generateWorksheetXml(sheetMessages, busType, (i == 0))});
+        // 每个数据表均启用冻结窗格（与首表一致：冻结表头行 + 报文段前 12 列）
+        entries.append({path, generateWorksheetXml(sheetMessages, busType, true)});
     }
 
     return writeZipArchive(filePath, entries, error);
